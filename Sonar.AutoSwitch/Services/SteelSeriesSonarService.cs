@@ -62,9 +62,9 @@ public class SteelSeriesSonarService : ISteelSeriesSonarService
         IEnumerable<int> potentialPorts = processesByName.SelectMany(p => NetworkHelper.GetPortById(p.Id, false));
 
         potentialPorts = _lastWorkingPort != null ? potentialPorts.Prepend(_lastWorkingPort.Value) : potentialPorts;
-        _lastWorkingPort = null;
 
         using var httpClient = new HttpClient();
+        bool switched = false;
         foreach (int potentialPort in potentialPorts.Distinct())
         {
             if (cancellationToken.IsCancellationRequested)
@@ -76,9 +76,12 @@ public class SteelSeriesSonarService : ISteelSeriesSonarService
             if (httpResponseMessage?.StatusCode == HttpStatusCode.OK)
             {
                 _lastWorkingPort = potentialPort;
+                switched = true;
                 break;
             }
         }
+        if (!switched)
+            _lastWorkingPort = null;
 
         StateManager.Instance.GetOrLoadState<HomeViewModel>().ActiveProfile = sonarGamingConfiguration;
     }
