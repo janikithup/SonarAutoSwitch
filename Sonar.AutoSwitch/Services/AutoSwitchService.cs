@@ -36,7 +36,17 @@ public class AutoSwitchService
 
     private static void Log(string message)
     {
-        try { File.AppendAllText(LogPath, $"{DateTime.Now:HH:mm:ss.fff} {message}\n"); } catch { }
+        try
+        {
+            if (new FileInfo(LogPath).Length > 1_000_000)
+            {
+                File.Copy(LogPath, LogPath + ".bak", overwrite: true);
+                File.WriteAllText(LogPath, "");
+            }
+            // ponytail: no framework, just a size cap; add proper rotation if log analysis becomes a need
+            File.AppendAllText(LogPath, $"{DateTime.Now:HH:mm:ss.fff} {message}\n");
+        }
+        catch { }
     }
 
     private async void InstanceOnForegroundWindowChanged(object? sender, WindowInfo e)
