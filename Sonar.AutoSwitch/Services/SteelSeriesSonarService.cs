@@ -83,7 +83,6 @@ public class SteelSeriesSonarService : ISteelSeriesSonarService
         if (!switched)
             _lastWorkingPort = null;
 
-        StateManager.Instance.GetOrLoadState<HomeViewModel>().ActiveProfile = sonarGamingConfiguration;
     }
 
     public string GetSelectedGamingConfiguration()

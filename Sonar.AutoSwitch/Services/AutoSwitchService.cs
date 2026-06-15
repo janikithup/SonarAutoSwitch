@@ -69,6 +69,8 @@ public class AutoSwitchService
             sonarGamingConfiguration ??= _homeViewModel.DefaultSonarGamingConfiguration;
             Log($"Matched profile: {autoSwitchProfileViewModel?.Title ?? "(none→default)"} → config={sonarGamingConfiguration?.Name} id={sonarGamingConfiguration?.Id}");
 
+            _homeViewModel.ActiveProfile = sonarGamingConfiguration;
+
             if (string.IsNullOrEmpty(sonarGamingConfiguration.Id) ||
                 _selectedGamingConfiguration == sonarGamingConfiguration)
             {
