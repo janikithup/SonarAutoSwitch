@@ -13,8 +13,9 @@ using Sonar.AutoSwitch.ViewModels;
 
 namespace Sonar.AutoSwitch.Services;
 
-public class SteelSeriesSonarService : ISteelSeriesSonarService
+public class SteelSeriesSonarService
 {
+    private static readonly HttpClient _httpClient = new HttpClient();
     private readonly string _connectionString;
     private int? _lastWorkingPort;
 
@@ -63,13 +64,12 @@ public class SteelSeriesSonarService : ISteelSeriesSonarService
 
         potentialPorts = _lastWorkingPort != null ? potentialPorts.Prepend(_lastWorkingPort.Value) : potentialPorts;
 
-        using var httpClient = new HttpClient();
         bool switched = false;
         foreach (int potentialPort in potentialPorts.Distinct())
         {
             if (cancellationToken.IsCancellationRequested)
                 return;
-            HttpResponseMessage? httpResponseMessage = await httpClient.PutAsync(
+            HttpResponseMessage? httpResponseMessage = await _httpClient.PutAsync(
                 $"http://localhost:{potentialPort}/configs/{sonarGamingConfiguration.Id}/select",
                 new StringContent(""),
                 cancellationToken).ContinueWith(t => t.IsCompletedSuccessfully ? t.Result : null);

@@ -7,14 +7,7 @@ using System.Text;
 
 namespace Sonar.AutoSwitch.Services.Win32;
 
-public interface IWindowEventManager
-{
-    void SubscribeToWindowEvents();
-    void UnsubscribeToWindowsEvents();
-    event EventHandler<WindowInfo> ForegroundWindowChanged;
-}
-
-public class Win32WindowEventManager : IWindowEventManager
+public class Win32WindowEventManager
 {
     private readonly WinEventProc _lpfnWinEventProc;
     private IntPtr _windowEventHook;

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -23,7 +23,7 @@ public class NetworkHelper
 
     public static IEnumerable<int> GetPortById(int pid, bool isRemote = true)
     {
-        var mibTcprowOwnerPids = new IPHelperWrapper().GetAllTCPv4Connections();
+        var mibTcprowOwnerPids = IPHelperWrapper.GetAllTCPv4Connections();
         foreach (var mibTcprowOwnerPid in mibTcprowOwnerPids)
         {
             if (mibTcprowOwnerPid.owningPid == pid)
@@ -72,40 +72,6 @@ public class NetworkHelper
         public MIB_TCPROW_OWNER_PID[] table;
     }
 
-// https://msdn.microsoft.com/en-us/library/aa366896
-    [StructLayout(LayoutKind.Sequential)]
-    public struct MIB_TCP6ROW_OWNER_PID
-    {
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]
-        public byte[] localAddr;
-
-        public uint localScopeId;
-
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 2)]
-        public byte[] localPort;
-
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]
-        public byte[] remoteAddr;
-
-        public uint remoteScopeId;
-
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 2)]
-        public byte[] remotePort;
-
-        public uint state;
-        public uint owningPid;
-    }
-
-// https://msdn.microsoft.com/en-us/library/windows/desktop/aa366905
-    [StructLayout(LayoutKind.Sequential)]
-    public struct MIB_TCP6TABLE_OWNER_PID
-    {
-        public uint dwNumEntries;
-
-        [MarshalAs(UnmanagedType.ByValArray, ArraySubType = UnmanagedType.Struct, SizeConst = 1)]
-        public MIB_TCP6ROW_OWNER_PID[] table;
-    }
-
     public static class IPHelperAPI
     {
         [DllImport("iphlpapi.dll", SetLastError = true)]
@@ -118,33 +84,16 @@ public class NetworkHelper
             int reserved = 0);
     }
 
-    public class IPHelperWrapper : IDisposable
+    public static class IPHelperWrapper
     {
         public const int AF_INET = 2; // IP_v4 = System.Net.Sockets.AddressFamily.InterNetwork
-        public const int AF_INET6 = 23; // IP_v6 = System.Net.Sockets.AddressFamily.InterNetworkV6
 
-        // Creates a new wrapper for the local machine
-        public IPHelperWrapper()
-        {
-        }
-
-        // Disposes of this wrapper
-        public void Dispose()
-        {
-            GC.SuppressFinalize(this);
-        }
-
-        public List<MIB_TCPROW_OWNER_PID> GetAllTCPv4Connections()
+        public static List<MIB_TCPROW_OWNER_PID> GetAllTCPv4Connections()
         {
             return GetTCPConnections<MIB_TCPROW_OWNER_PID, MIB_TCPTABLE_OWNER_PID>(AF_INET);
         }
 
-        public List<MIB_TCP6ROW_OWNER_PID> GetAllTCPv6Connections()
-        {
-            return GetTCPConnections<MIB_TCP6ROW_OWNER_PID, MIB_TCP6TABLE_OWNER_PID>(AF_INET6);
-        }
-
-        public List<IPR> GetTCPConnections<IPR, IPT>(int ipVersion)
+        public static List<IPR> GetTCPConnections<IPR, IPT>(int ipVersion)
         {
             //IPR = Row Type, IPT = Table Type
 
@@ -186,12 +135,6 @@ public class NetworkHelper
             }
 
             return tableRows != null ? tableRows.ToList() : new List<IPR>();
-        }
-
-        // Occurs on destruction of the Wrapper
-        ~IPHelperWrapper()
-        {
-            Dispose();
         }
     } // wrapper class
 }
