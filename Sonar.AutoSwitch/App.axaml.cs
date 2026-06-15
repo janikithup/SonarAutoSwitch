@@ -23,9 +23,10 @@ public class App : Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            desktop.MainWindow = new MainWindow();
             if (firstLoad)
             {
-                desktop.MainWindow = new MainWindow();
+                desktop.MainWindow.Show();
                 StateManager.Instance.SaveState<SettingsViewModel>();
             }
         }
