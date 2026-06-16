@@ -46,9 +46,6 @@ public class SettingsViewModel : ViewModelBase
         }
     }
 
-    // ponytail: auto-property so JSON sets it without triggering side-effects via [JsonConstructor] path.
-    public bool HasShownTrayNotification { get; set; }
-
     [JsonIgnore]
     public string StartupDescription
     {
