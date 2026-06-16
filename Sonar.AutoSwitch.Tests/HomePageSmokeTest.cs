@@ -28,7 +28,7 @@ public class HomePageSmokeTest
     }
 
     [AvaloniaFact]
-    public void ExeName_autocomplete_shows_dropdown_when_typing()
+    public void ExeName_autocomplete_has_process_list_and_opens_on_typing()
     {
         var window = new Window { Width = 600, Height = 450 };
         window.Content = new Home();
@@ -38,13 +38,18 @@ public class HomePageSmokeTest
         var home = (Home)window.Content;
         var autoComplete = home.GetVisualDescendants().OfType<AutoCompleteBox>().First();
 
-        // Focus the field, clear it, type a prefix
+        // ItemsSource must be wired — this catches FindControl returning null or ProcessNames being empty
+        Assert.NotNull(autoComplete.ItemsSource);
+        var items = autoComplete.ItemsSource!.Cast<string>().ToList();
+        Assert.True(items.Count > 0, "ItemsSource is empty — OnLoaded did not wire process list");
+
+        // Ctrl+A selects the current text, then typing replaces it and triggers the filter
         autoComplete.Focus();
-        window.KeyPressQwerty(PhysicalKey.A, RawInputModifiers.Control); // select all
-        window.KeyTextInput("f");
+        window.KeyPressQwerty(PhysicalKey.A, RawInputModifiers.Control);
+        window.KeyTextInput("e"); // matches explorer, everything, etc.
         window.UpdateLayout();
 
-        // Dropdown should be open with at least one item (firefox, etc. will be running)
-        Assert.True(autoComplete.IsDropDownOpen, "Dropdown did not open after typing");
+        Assert.True(autoComplete.IsDropDownOpen,
+            $"Dropdown did not open. Text='{autoComplete.Text}', Items={items.Count}");
     }
 }

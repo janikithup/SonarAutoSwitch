@@ -5,7 +5,6 @@
              xmlns:viewModels="clr-namespace:Sonar.AutoSwitch.ViewModels"
              xmlns:ui="clr-namespace:FluentAvalonia.UI.Controls;assembly=FluentAvalonia"
              xmlns:services="clr-namespace:Sonar.AutoSwitch.Services"
-             xmlns:local="clr-namespace:Sonar.AutoSwitch.Pages"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="Sonar.AutoSwitch.Pages.Home"
              x:CompileBindings="True"
@@ -61,9 +60,8 @@
                         Text="The name of the executable.&#x0a;You can use the Task Manager to check.&#x0a;Leave empty to ignore."
                         TextWrapping="Wrap" Opacity="0.5" VerticalAlignment="Top" Margin="0,0,2,10" />
                 </StackPanel>
-                <AutoCompleteBox Grid.Row="0" Grid.Column="1" Text="{Binding ExeName}"
+                <AutoCompleteBox x:Name="ExeNameBox" Grid.Row="0" Grid.Column="1"
                                 VerticalAlignment="Top" Watermark="The name of the executable, e.g. Overwatch"
-                                ItemsSource="{x:Static local:Home.ProcessNames}"
                                 FilterMode="Contains" MinimumPrefixLength="1" />
 
                 <StackPanel Grid.Row="1" Grid.Column="0">
