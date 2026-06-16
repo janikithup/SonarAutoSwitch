@@ -1,5 +1,8 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Text.Json.Serialization;
 using Sonar.AutoSwitch.Services;
@@ -12,13 +15,18 @@ public class HomeViewModel : ViewModelBase
         new() { new AutoSwitchProfileViewModel() };
 
     private SonarGamingConfiguration _defaultSonarGamingConfiguration = new(null, "unset");
-    private AutoSwitchProfileViewModel? _selectedAutoSwitchProfileViewModel;
     private SonarGamingConfiguration _activeProfile;
+
+    public static IReadOnlyList<string> ProcessNames { get; } =
+        Process.GetProcesses().Select(p => p.ProcessName).Distinct().OrderBy(x => x).ToList();
 
     public HomeViewModel()
     {
-        SelectedAutoSwitchProfileViewModel = AutoSwitchProfiles.FirstOrDefault();
-        AutoSwitchProfiles.CollectionChanged += AutoSwitchProfilesOnCollectionChanged;
+        foreach (var p in _autoSwitchProfiles)
+            Subscribe(p);
+        _autoSwitchProfiles.CollectionChanged += AutoSwitchProfilesOnCollectionChanged;
+        if (_autoSwitchProfiles.FirstOrDefault() is { } first)
+            first.IsExpanded = true;
     }
 
     public SonarGamingConfiguration DefaultSonarGamingConfiguration
@@ -37,20 +45,18 @@ public class HomeViewModel : ViewModelBase
         get => _autoSwitchProfiles;
         set
         {
-            _autoSwitchProfiles = value;
-            SelectedAutoSwitchProfileViewModel = AutoSwitchProfiles.FirstOrDefault();
-        }
-    }
+            foreach (var p in _autoSwitchProfiles)
+                p.PropertyChanged -= OnProfilePropertyChanged;
+            _autoSwitchProfiles.CollectionChanged -= AutoSwitchProfilesOnCollectionChanged;
 
-    [JsonIgnore]
-    public AutoSwitchProfileViewModel? SelectedAutoSwitchProfileViewModel
-    {
-        get => _selectedAutoSwitchProfileViewModel;
-        set
-        {
-            if (Equals(value, _selectedAutoSwitchProfileViewModel)) return;
-            _selectedAutoSwitchProfileViewModel = value;
-            OnPropertyChanged();
+            _autoSwitchProfiles = value;
+
+            foreach (var p in _autoSwitchProfiles)
+                Subscribe(p);
+            _autoSwitchProfiles.CollectionChanged += AutoSwitchProfilesOnCollectionChanged;
+
+            if (_autoSwitchProfiles.FirstOrDefault() is { } first)
+                first.IsExpanded = true;
         }
     }
 
@@ -84,17 +90,39 @@ public class HomeViewModel : ViewModelBase
         return homeViewModel;
     }
 
-    public void RemoveAutoSwitchProfile()
-    {
-        if (SelectedAutoSwitchProfileViewModel != null) AutoSwitchProfiles.Remove(SelectedAutoSwitchProfileViewModel);
-        if (!AutoSwitchProfiles.Any())
-            AutoSwitchProfiles.Add(new AutoSwitchProfileViewModel());
-        SelectedAutoSwitchProfileViewModel = AutoSwitchProfiles.FirstOrDefault();
-    }
-
     public void AddAutoSwitchProfile()
     {
-        AutoSwitchProfiles.Add(new AutoSwitchProfileViewModel());
+        var profile = new AutoSwitchProfileViewModel();
+        AutoSwitchProfiles.Add(profile); // Subscribe wired via CollectionChanged
+        profile.IsExpanded = true;       // Accordion collapses others via OnProfilePropertyChanged
+    }
+
+    public void RemoveAutoSwitchProfile(AutoSwitchProfileViewModel profile)
+    {
+        AutoSwitchProfiles.Remove(profile);
+        if (!AutoSwitchProfiles.Any())
+        {
+            var blank = new AutoSwitchProfileViewModel();
+            AutoSwitchProfiles.Add(blank);
+        }
+        if (!AutoSwitchProfiles.Any(p => p.IsExpanded))
+            AutoSwitchProfiles.First().IsExpanded = true;
+    }
+
+    private void Subscribe(AutoSwitchProfileViewModel profile)
+    {
+        profile.OnDeleteConfirmed = () => RemoveAutoSwitchProfile(profile);
+        profile.PropertyChanged += OnProfilePropertyChanged;
+    }
+
+    private void OnProfilePropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(AutoSwitchProfileViewModel.IsExpanded)) return;
+        if (sender is not AutoSwitchProfileViewModel profile) return;
+
+        if (profile.IsExpanded)
+            foreach (var p in AutoSwitchProfiles.Where(p => p != profile))
+                p.IsExpanded = false;
     }
 
     protected override void OnPropertyChanged(string? propertyName = null)
@@ -106,5 +134,11 @@ public class HomeViewModel : ViewModelBase
     private void AutoSwitchProfilesOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         StateManager.Instance.SaveState<HomeViewModel>();
+        if (e.NewItems != null)
+            foreach (AutoSwitchProfileViewModel p in e.NewItems)
+                Subscribe(p);
+        if (e.OldItems != null)
+            foreach (AutoSwitchProfileViewModel p in e.OldItems)
+                p.PropertyChanged -= OnProfilePropertyChanged;
     }
 }

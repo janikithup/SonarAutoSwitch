@@ -1,4 +1,4 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -13,12 +13,12 @@
         <TextBlock DockPanel.Dock="Top" Text="Auto Switch Profiles" Margin="0,0,0,8"
                    Theme="{StaticResource SubtitleTextBlockStyle}" />
         <StackPanel Orientation="Horizontal" DockPanel.Dock="Top" Margin="0,0,0,4">
-            <TextBlock DockPanel.Dock="Top" Text="Active config: " />
+            <TextBlock Text="Active config: " />
             <TextBlock Text="{Binding ActiveProfile.Name}" FontWeight="Bold" />
         </StackPanel>
         <TextBlock DockPanel.Dock="Top" Text="Default config: " Margin="0,0,0,4" />
         <ComboBox DockPanel.Dock="Top" SelectedItem="{Binding DefaultSonarGamingConfiguration}"
-                  PlaceholderText="Default game configuration" Margin="0,0,0,8"
+                  PlaceholderText="Default game configuration" Margin="0,0,0,12"
                   ItemsSource="{Binding Path=AvailableGamingConfigurations, Source={x:Static services:SteelSeriesSonarService.Instance}}">
             <ComboBox.ItemTemplate>
                 <DataTemplate DataType="services:SonarGamingConfiguration">
@@ -26,73 +26,80 @@
                 </DataTemplate>
             </ComboBox.ItemTemplate>
         </ComboBox>
-        <TextBlock DockPanel.Dock="Top" Text="Per app config: " Margin="0,0,0,4" />
-        <DockPanel DockPanel.Dock="Top" HorizontalAlignment="Stretch">
 
-            <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center">
-                <Button Command="{Binding AddAutoSwitchProfile}" VerticalAlignment="Center" Margin="0,0,0,2">
-                    <ui:SymbolIcon Symbol="Add" />
-                </Button>
-                <Button Command="{Binding RemoveAutoSwitchProfile}" VerticalAlignment="Center">
-                    <ui:SymbolIcon Symbol="Remove" />
-                </Button>
-            </StackPanel>
-            <ListBox DockPanel.Dock="Left" MinWidth="300" HorizontalAlignment="Stretch" Margin="0,0,2,0"
-                     SelectedItem="{Binding SelectedAutoSwitchProfileViewModel}"
-                     ItemsSource="{Binding AutoSwitchProfiles}">
-                <ListBox.ItemTemplate>
-                    <DataTemplate DataType="viewModels:AutoSwitchProfileViewModel">
-                        <TextBlock Text="{Binding DisplayName}" />
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
-        </DockPanel>
-        <Border DockPanel.Dock="Top" CornerRadius="{DynamicResource ControlCornerRadius}"
-                Padding="{StaticResource ButtonPadding}" Margin="8"
-                IsEnabled="{Binding SelectedAutoSwitchProfileViewModel, Converter={x:Static ObjectConverters.IsNotNull}}"
-                BorderThickness="1" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
-                Background="{DynamicResource ControlFillColorDefaultBrush}">
-            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto, Auto, Auto"
-                  DataContext="{Binding SelectedAutoSwitchProfileViewModel}">
-                <StackPanel>
-                    <TextBlock Text="Game executable name: " VerticalAlignment="Top" Margin="0,0,2,0" />
-                    <TextBlock
-                        Text="The name of the executable.&#x0a;You can use the Task Manager to check.&#x0a;Leave empty to ignore."
-                        TextWrapping="Wrap" Opacity="0.5" VerticalAlignment="Top" Margin="0,0,2,10" />
-                </StackPanel>
-                <AutoCompleteBox x:Name="ExeNameBox" Grid.Row="0" Grid.Column="1"
-                                VerticalAlignment="Top" Watermark="The name of the executable, e.g. Overwatch"
-                                FilterMode="Contains" MinimumPrefixLength="1"
-                                MaxDropDownHeight="200" />
+        <ItemsControl DockPanel.Dock="Top" ItemsSource="{Binding AutoSwitchProfiles}"
+                      HorizontalAlignment="Stretch">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="viewModels:AutoSwitchProfileViewModel">
+                    <Expander IsExpanded="{Binding IsExpanded, Mode=TwoWay}"
+                              HorizontalAlignment="Stretch"
+                              HorizontalContentAlignment="Stretch"
+                              Margin="0,1">
+                        <Expander.Header>
+                            <TextBlock Text="{Binding DisplayName}" />
+                        </Expander.Header>
 
-                <StackPanel Grid.Row="1" Grid.Column="0">
-                    <TextBlock Text="Window title: " VerticalAlignment="Top" Margin="0,0,2,0" />
-                    <TextBlock Text="The title of the window.&#x0a;Leave empty to ignore."
-                               TextWrapping="Wrap" Opacity="0.5" VerticalAlignment="Top" Margin="0,0,2,10" />
-                </StackPanel>
-                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Title}"
-                         VerticalAlignment="Top"
-                         Watermark="The title of the game, use for protected games like Valorant, COD" />
+                        <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto"
+                              Margin="8,8,0,4">
 
-                <StackPanel Grid.Row="2" Grid.Column="0">
-                    <TextBlock Text="Sonar gaming configuration: " VerticalAlignment="Top"
-                               Margin="0,0,2,0" />
-                    <TextBlock Text="The name of the Sonar Gaming Profile.&#x0a;You can setup profiles in the GG app."
-                               TextWrapping="Wrap" Opacity="0.5" VerticalAlignment="Top" Margin="0,0,2,0" />
-                </StackPanel>
+                            <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,12,0">
+                                <TextBlock Text="Game executable name:" />
+                                <TextBlock Text="No .exe — check Task Manager.&#x0a;Leave empty to ignore."
+                                           TextWrapping="Wrap" Opacity="0.5" Margin="0,2,0,10" MaxWidth="180" />
+                            </StackPanel>
+                            <AutoCompleteBox Grid.Row="0" Grid.Column="1"
+                                            VerticalAlignment="Top"
+                                            Text="{Binding ExeName}"
+                                            Watermark="e.g. Overwatch"
+                                            FilterMode="Contains" MinimumPrefixLength="1"
+                                            MaxDropDownHeight="200"
+                                            ItemsSource="{x:Static viewModels:HomeViewModel.ProcessNames}" />
 
-                <ComboBox Grid.Row="2" Grid.Column="1" SelectedItem="{Binding SonarGamingConfiguration}"
-                          VerticalAlignment="Top"
-                          ItemsSource="{Binding Path=AvailableGamingConfigurations, Source={x:Static services:SteelSeriesSonarService.Instance}}">
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate DataType="services:SonarGamingConfiguration">
-                            <TextBlock Text="{Binding Name}" />
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
-            </Grid>
-        </Border>
+                            <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,12,0">
+                                <TextBlock Text="Window title:" />
+                                <TextBlock Text="Leave empty to ignore."
+                                           TextWrapping="Wrap" Opacity="0.5" Margin="0,2,0,10" />
+                            </StackPanel>
+                            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Title}"
+                                     VerticalAlignment="Top"
+                                     Watermark="e.g. Valorant, COD" />
 
+                            <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,12,0">
+                                <TextBlock Text="Sonar gaming config:" />
+                                <TextBlock Text="Set up profiles in GG app."
+                                           TextWrapping="Wrap" Opacity="0.5" Margin="0,2,0,0" />
+                            </StackPanel>
+                            <ComboBox Grid.Row="2" Grid.Column="1"
+                                      SelectedItem="{Binding SonarGamingConfiguration}"
+                                      VerticalAlignment="Top"
+                                      ItemsSource="{Binding Path=AvailableGamingConfigurations, Source={x:Static services:SteelSeriesSonarService.Instance}}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate DataType="services:SonarGamingConfiguration">
+                                        <TextBlock Text="{Binding Name}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
 
+                            <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal"
+                                        Margin="0,12,0,0" HorizontalAlignment="Right" Spacing="8">
+                                <Button IsVisible="{Binding !IsConfirmingDelete}"
+                                        Command="{Binding StartDelete}"
+                                        ToolTip.Tip="Delete this profile">
+                                    <ui:SymbolIcon Symbol="Delete" />
+                                </Button>
+                                <StackPanel IsVisible="{Binding IsConfirmingDelete}"
+                                            Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="Delete this profile?" VerticalAlignment="Center" Opacity="0.8" />
+                                    <Button Command="{Binding ConfirmDelete}"
+                                            Foreground="{DynamicResource SystemFillColorCriticalBrush}">Yes, delete</Button>
+                                    <Button Command="{Binding CancelDelete}">Cancel</Button>
+                                </StackPanel>
+                            </StackPanel>
+
+                        </Grid>
+                    </Expander>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
     </DockPanel>
 </UserControl>

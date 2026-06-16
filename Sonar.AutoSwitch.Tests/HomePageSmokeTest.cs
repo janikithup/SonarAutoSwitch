@@ -1,7 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
-using Avalonia.Input;
 using Avalonia.VisualTree;
 using Sonar.AutoSwitch.Pages;
 
@@ -10,44 +9,43 @@ namespace Sonar.AutoSwitch.Tests;
 public class HomePageSmokeTest
 {
     [AvaloniaFact]
-    public void Home_renders_profile_list_and_exe_field()
+    public void Home_renders_accordion_with_first_profile_expanded()
     {
-        var window = new Window { Width = 600, Height = 450 };
+        var window = new Window { Width = 600, Height = 500 };
         window.Content = new Home();
         window.Show();
         window.UpdateLayout();
 
         var home = (Home)window.Content;
-        var listBox = home.GetVisualDescendants().OfType<ListBox>().FirstOrDefault();
-        var autoComplete = home.GetVisualDescendants().OfType<AutoCompleteBox>().FirstOrDefault();
+        var expanders = home.GetVisualDescendants().OfType<Expander>().ToList();
+        var expanded = expanders.FirstOrDefault(e => e.IsExpanded);
 
-        Assert.NotNull(listBox);
-        Assert.NotNull(autoComplete);
-        Assert.True(listBox.Bounds.Width > 0, "Profile list not rendered");
-        Assert.True(autoComplete.Bounds.Width > 0, "ExeName field not rendered");
+        Assert.True(expanders.Count > 0, "No Expanders found — accordion not rendered");
+        Assert.NotNull(expanded);
+        Assert.True(expanded.Bounds.Width > 0, "Expanded profile has no width");
     }
 
     [AvaloniaFact]
     public void ExeName_autocomplete_has_process_list_and_opens_on_typing()
     {
-        var window = new Window { Width = 600, Height = 450 };
+        var window = new Window { Width = 600, Height = 500 };
         window.Content = new Home();
         window.Show();
         window.UpdateLayout();
 
         var home = (Home)window.Content;
-        var autoComplete = home.GetVisualDescendants().OfType<AutoCompleteBox>().First();
 
-        // ItemsSource must be wired — this catches FindControl returning null or ProcessNames being empty
+        // First profile is expanded by default — AutoCompleteBox should be in visual tree
+        var autoComplete = home.GetVisualDescendants().OfType<AutoCompleteBox>().FirstOrDefault();
+        Assert.NotNull(autoComplete);
         Assert.NotNull(autoComplete.ItemsSource);
-        var items = autoComplete.ItemsSource!.Cast<string>().ToList();
-        Assert.True(items.Count > 0, "ItemsSource is empty — OnLoaded did not wire process list");
 
-        // Focus the field (triggers GotFocus → SelectAll on inner TextBox) then type — no Ctrl+A
-        // If SelectAll doesn't work, text appends to "MyGame" → no match → test fails honestly
+        var items = autoComplete.ItemsSource!.Cast<string>().ToList();
+        Assert.True(items.Count > 0, "ItemsSource is empty — ProcessNames not wired");
+
         autoComplete.Focus();
         window.UpdateLayout();
-        window.KeyTextInput("e"); // replaces selected text; matches explorer, powershell, etc.
+        window.KeyTextInput("e");
         window.UpdateLayout();
 
         Assert.True(autoComplete.IsDropDownOpen,

@@ -1,8 +1,10 @@
 using System;
-using System.ComponentModel;
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using FluentAvalonia.UI.Controls;
 using Sonar.AutoSwitch.Pages;
+using Sonar.AutoSwitch.Services;
+using Sonar.AutoSwitch.ViewModels;
 
 namespace Sonar.AutoSwitch;
 
@@ -28,10 +30,17 @@ public partial class MainWindow : Window
     {
         _frameView.Navigate(e.SelectedItem switch
         {
-            NavigationViewItem {Tag: "Home"} => typeof(Home),
-            NavigationViewItem {Tag: "About"} => typeof(About),
-            NavigationViewItem {Name: "SettingsItem"} => typeof(Settings),
+            NavigationViewItem { Tag: "Home" } => typeof(Home),
+            NavigationViewItem { Tag: "About" } => typeof(About),
+            NavigationViewItem { Name: "SettingsItem" } => typeof(Settings),
             _ => throw new ArgumentOutOfRangeException()
         });
+    }
+
+    private void AddProfile_Click(object? sender, RoutedEventArgs e)
+    {
+        StateManager.Instance.GetOrLoadState<HomeViewModel>().AddAutoSwitchProfile();
+        if (_frameView.CurrentSourcePageType != typeof(Home))
+            _frameView.Navigate(typeof(Home));
     }
 }
