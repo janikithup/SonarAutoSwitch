@@ -35,6 +35,9 @@ public class SettingsViewModel : ViewModelBase
 
     public bool UseGithubConfigs { get; set; } = true;
 
+    // ponytail: auto-property so JSON sets it without triggering side-effects via [JsonConstructor] path.
+    public bool HasShownTrayNotification { get; set; }
+
     [JsonIgnore]
     public string StartupDescription
     {
