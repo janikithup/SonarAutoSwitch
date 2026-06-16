@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -50,6 +50,10 @@ public class AutoSwitchService
         catch { }
     }
 
+    public static bool ProfileMatches(AutoSwitchProfileViewModel p, string? exeName, string title) =>
+        (string.IsNullOrEmpty(p.ExeName) || string.Equals(p.ExeName, exeName, StringComparison.OrdinalIgnoreCase)) &&
+        (string.IsNullOrEmpty(p.Title) || title.Contains(p.Title, StringComparison.OrdinalIgnoreCase));
+
     private async void InstanceOnForegroundWindowChanged(object? sender, WindowInfo e)
     {
         var sw = Stopwatch.StartNew();
@@ -75,10 +79,7 @@ public class AutoSwitchService
                 }
 
                 AutoSwitchProfileViewModel? autoSwitchProfileViewModel =
-                    autoSwitchProfileViewModels.FirstOrDefault(p =>
-                        (string.IsNullOrEmpty(p.ExeName) ||
-                         string.Equals(p.ExeName, windowExeName, StringComparison.OrdinalIgnoreCase)) &&
-                        (string.IsNullOrEmpty(p.Title) || e.Title.Contains(p.Title, StringComparison.OrdinalIgnoreCase)));
+                    autoSwitchProfileViewModels.FirstOrDefault(p => AutoSwitchService.ProfileMatches(p, windowExeName, e.Title));
                 SonarGamingConfiguration? sonarGamingConfiguration = autoSwitchProfileViewModel?.SonarGamingConfiguration;
                 sonarGamingConfiguration ??= _homeViewModel.DefaultSonarGamingConfiguration;
                 Log($"Matched: {autoSwitchProfileViewModel?.Title ?? "(none→default)"} → {sonarGamingConfiguration?.Name} [{sw.ElapsedMilliseconds}ms]");
