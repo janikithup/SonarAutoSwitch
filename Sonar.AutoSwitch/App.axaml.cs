@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -25,7 +26,7 @@ public class App : Application
         {
             desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
             desktop.MainWindow = new MainWindow();
-            if (firstLoad || Array.IndexOf(desktop.Args ?? [], "--show") >= 0)
+            if (firstLoad || (desktop.Args ?? []).Contains("--show"))
             {
                 desktop.MainWindow.Show();
                 StateManager.Instance.SaveState<SettingsViewModel>();

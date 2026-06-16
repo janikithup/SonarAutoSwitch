@@ -265,9 +265,7 @@ public class UIExplorationTest : IDisposable
     private void CleanupNewProfile()
     {
         Thread.Sleep(200);
-        var deleteBtn = _window.FindFirstDescendant(cf =>
-            cf.ByName("Delete profile").And(cf.ByControlType(ControlType.Button)))?.AsButton();
-        deleteBtn?.Click();
+        FindDeleteButton()?.Click();
         Thread.Sleep(200);
         var confirmBtn = _window.FindFirstDescendant(cf =>
             cf.ByName("Yes, delete").And(cf.ByControlType(ControlType.Button)))?.AsButton();
@@ -278,10 +276,7 @@ public class UIExplorationTest : IDisposable
     private AutomationElement? FindExpandedGroup()
     {
         var groups = _window.FindAllDescendants(cf => cf.ByControlType(ControlType.Group));
-        foreach (var group in groups)
-            if (group.FindAllChildren().Length >= 3)
-                return group;
-        return null;
+        return groups.FirstOrDefault(g => g.FindAllChildren().Length >= 3);
     }
 
     private Button? FindDeleteButton()

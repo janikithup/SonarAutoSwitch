@@ -35,7 +35,7 @@ public class AutoSwitchService
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "Sonar.AutoSwitch", "debug.log");
 
-    private static void Log(string message)
+    internal static void Log(string message)
     {
         try
         {
