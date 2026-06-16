@@ -43,10 +43,11 @@ public class HomePageSmokeTest
         var items = autoComplete.ItemsSource!.Cast<string>().ToList();
         Assert.True(items.Count > 0, "ItemsSource is empty — OnLoaded did not wire process list");
 
-        // Ctrl+A selects the current text, then typing replaces it and triggers the filter
+        // Focus the field (triggers GotFocus → SelectAll on inner TextBox) then type — no Ctrl+A
+        // If SelectAll doesn't work, text appends to "MyGame" → no match → test fails honestly
         autoComplete.Focus();
-        window.KeyPressQwerty(PhysicalKey.A, RawInputModifiers.Control);
-        window.KeyTextInput("e"); // matches explorer, everything, etc.
+        window.UpdateLayout();
+        window.KeyTextInput("e"); // replaces selected text; matches explorer, powershell, etc.
         window.UpdateLayout();
 
         Assert.True(autoComplete.IsDropDownOpen,

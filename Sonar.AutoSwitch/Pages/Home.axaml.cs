@@ -7,7 +7,6 @@ using System.Linq;
 using Avalonia.Controls;
 using Avalonia.LogicalTree;
 using Avalonia.Markup.Xaml;
-using Avalonia.VisualTree;
 using Sonar.AutoSwitch.ViewModels;
 
 namespace Sonar.AutoSwitch.Pages;
@@ -28,8 +27,12 @@ public partial class Home : UserControl
         if (_exeBox != null)
         {
             _exeBox.ItemsSource = names;
-            _exeBox.GotFocus += (_, _) =>
-                _exeBox.GetVisualDescendants().OfType<TextBox>().FirstOrDefault()?.SelectAll();
+            // Select-all via the template's inner TextBox so typing replaces the current value
+            _exeBox.TemplateApplied += (_, e) =>
+            {
+                if (e.NameScope.Find<TextBox>("PART_TextBox") is { } tb)
+                    tb.GotFocus += (_, _) => tb.SelectAll();
+            };
         }
 
         DataContext = HomeViewModel.LoadHomeViewModel();
