@@ -5,7 +5,6 @@ riderModule.iml
 /_ReSharper.Caches/
 /.vs/Sonar.AutoSwitch
 
-# Local dev / Claude working files — never publish
 CLAUDE.md
 .claude/
 BACKLOG.md
