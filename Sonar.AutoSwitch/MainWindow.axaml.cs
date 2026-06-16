@@ -13,6 +13,7 @@ namespace Sonar.AutoSwitch;
 public partial class MainWindow : Window
 {
     private readonly Frame _frameView;
+    private bool _trayBalloonShown;
 
     public MainWindow()
     {
@@ -24,13 +25,13 @@ public partial class MainWindow : Window
     protected override void OnClosing(WindowClosingEventArgs e)
     {
         base.OnClosing(e);
+        if (!IsVisible) return; // WM_CLOSE on already-hidden window (e.g. process shutdown); ignore.
         var settings = StateManager.Instance.GetOrLoadState<SettingsViewModel>();
         if (settings.CloseToTray)
         {
-            if (!settings.HasShownTrayNotification)
+            if (!_trayBalloonShown)
             {
-                settings.HasShownTrayNotification = true;
-                StateManager.Instance.SaveStateNow<SettingsViewModel>();
+                _trayBalloonShown = true;
                 TrayBalloon.Show("Sonar Auto Switch",
                     "Still running in the background. Right-click the tray icon to exit.");
             }
@@ -65,9 +66,17 @@ public partial class MainWindow : Window
         StateManager.Instance.GetOrLoadState<HomeViewModel>().AddAutoSwitchProfile();
         if (_frameView.CurrentSourcePageType != typeof(Home))
             _frameView.Navigate(typeof(Home));
-        // Scroll after layout so the new (last) profile is visible
-        Dispatcher.UIThread.Post(
-            () => this.FindControl<ScrollViewer>("MainScrollViewer")?.ScrollToEnd(),
-            DispatcherPriority.Loaded);
+        // Scroll to wherever the new profile lands: top (newest-first), bottom (manual/oldest), or skip (alphabetical).
+        Dispatcher.UIThread.Post(() =>
+        {
+            var scroll = this.FindControl<ScrollViewer>("MainScrollViewer");
+            if (scroll is null) return;
+            switch (StateManager.Instance.GetOrLoadState<HomeViewModel>().NewProfileScrollHint)
+            {
+                case 1:  scroll.ScrollToHome(); break;
+                case 0:  scroll.ScrollToEnd();  break;
+                // -1: alphabetical — new profile lands in the middle; don't scroll
+            }
+        }, DispatcherPriority.Background);
     }
 }

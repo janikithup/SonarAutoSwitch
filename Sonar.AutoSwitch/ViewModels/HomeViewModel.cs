@@ -94,6 +94,8 @@ public class HomeViewModel : ViewModelBase
             {
                 1  => _autoSwitchProfiles.OrderBy(p => p.DisplayName, StringComparer.CurrentCultureIgnoreCase),
                 -1 => _autoSwitchProfiles.OrderByDescending(p => p.DisplayName, StringComparer.CurrentCultureIgnoreCase),
+                2  => _autoSwitchProfiles.OrderByDescending(p => p.CreatedAt ?? DateTime.MinValue),
+                -2 => _autoSwitchProfiles.OrderBy(p => p.CreatedAt ?? DateTime.MaxValue),
                 _  => _autoSwitchProfiles
             };
             if (string.IsNullOrWhiteSpace(_searchText))
@@ -106,8 +108,28 @@ public class HomeViewModel : ViewModelBase
         }
     }
 
-    [JsonIgnore] public bool SortAscendingActive => _sortDirection == 1;
-    [JsonIgnore] public bool SortDescendingActive => _sortDirection == -1;
+    // 0=end, 1=top, -1=don't scroll (alphabetical — item lands in the middle)
+    [JsonIgnore] public int NewProfileScrollHint => _sortDirection switch { 2 => 1, 1 or -1 => -1, _ => 0 };
+
+    [JsonIgnore]
+    public string SortModeLabel => _sortDirection switch
+    {
+        1  => "↑",
+        -1 => "↓",
+        2  => "⏰↓",
+        -2 => "⏰↑",
+        _  => "⇅",
+    };
+
+    [JsonIgnore]
+    public string SortModeTooltip => _sortDirection switch
+    {
+        1  => "A to Z — click for Z to A",
+        -1 => "Z to A — click for newest first",
+        2  => "Newest first — click for oldest first",
+        -2 => "Oldest first — click to unsort",
+        _  => "Unsorted — click to sort A to Z",
+    };
 
     public static HomeViewModel LoadHomeViewModel()
     {
@@ -124,30 +146,35 @@ public class HomeViewModel : ViewModelBase
         }
 
         homeViewModel.ActiveProfile = activeProfile ?? homeViewModel.DefaultSonarGamingConfiguration;
+
+        // One-time backfill: stamp existing profiles that predate the CreatedAt field.
+        // Use sequential dates so list order is preserved as recency order.
+        var undated = homeViewModel._autoSwitchProfiles.Where(p => !p.CreatedAt.HasValue).ToList();
+        if (undated.Count > 0)
+        {
+            var baseTime = DateTime.UtcNow.AddDays(-undated.Count);
+            for (int i = 0; i < undated.Count; i++)
+                undated[i].CreatedAt = baseTime.AddDays(i);
+            StateManager.Instance.SaveState<HomeViewModel>();
+        }
+
         return homeViewModel;
     }
 
     public void AddAutoSwitchProfile()
     {
-        var profile = new AutoSwitchProfileViewModel();
+        var profile = new AutoSwitchProfileViewModel { CreatedAt = DateTime.UtcNow };
         AutoSwitchProfiles.Add(profile); // Subscribe wired via CollectionChanged
         profile.IsExpanded = true;       // Accordion collapses others via OnProfilePropertyChanged
     }
 
-    public void SortAscending()
+    public void CycleSort()
     {
-        _sortDirection = _sortDirection == 1 ? 0 : 1;
+        // 0 (initial manual) goes to 1 on first click; never cycles back to 0 after that.
+        _sortDirection = _sortDirection switch { 0 or -2 => 1, 1 => -1, -1 => 2, _ => -2 };
         base.OnPropertyChanged(nameof(FilteredProfiles));
-        base.OnPropertyChanged(nameof(SortAscendingActive));
-        base.OnPropertyChanged(nameof(SortDescendingActive));
-    }
-
-    public void SortDescending()
-    {
-        _sortDirection = _sortDirection == -1 ? 0 : -1;
-        base.OnPropertyChanged(nameof(FilteredProfiles));
-        base.OnPropertyChanged(nameof(SortAscendingActive));
-        base.OnPropertyChanged(nameof(SortDescendingActive));
+        base.OnPropertyChanged(nameof(SortModeLabel));
+        base.OnPropertyChanged(nameof(SortModeTooltip));
     }
 
     public void RemoveAutoSwitchProfile(AutoSwitchProfileViewModel profile)
@@ -158,8 +185,6 @@ public class HomeViewModel : ViewModelBase
             var blank = new AutoSwitchProfileViewModel();
             AutoSwitchProfiles.Add(blank);
         }
-        if (!AutoSwitchProfiles.Any(p => p.IsExpanded))
-            AutoSwitchProfiles.First().IsExpanded = true;
     }
 
     private void Subscribe(AutoSwitchProfileViewModel profile)
@@ -191,8 +216,8 @@ public class HomeViewModel : ViewModelBase
     {
         base.OnPropertyChanged(propertyName);
         if (propertyName is nameof(FilteredProfiles)
-                         or nameof(SortAscendingActive)
-                         or nameof(SortDescendingActive))
+                         or nameof(SortModeLabel)
+                         or nameof(SortModeTooltip))
             return;
         StateManager.Instance.SaveState<HomeViewModel>();
     }

@@ -5,6 +5,40 @@ namespace Sonar.AutoSwitch.Tests;
 
 public class HomeViewModelTest
 {
+    [Fact]
+    public void CycleSort_cycles_through_four_modes_without_returning_to_unsorted()
+    {
+        var home = new HomeViewModel();
+        Assert.Equal("⇅", home.SortModeLabel);   // initial unsorted
+        home.CycleSort(); Assert.Equal("↑",   home.SortModeLabel);
+        home.CycleSort(); Assert.Equal("↓",   home.SortModeLabel);
+        home.CycleSort(); Assert.Equal("⏰↓", home.SortModeLabel);
+        home.CycleSort(); Assert.Equal("⏰↑", home.SortModeLabel);
+        home.CycleSort(); Assert.Equal("↑",   home.SortModeLabel); // back to A→Z, not ⇅
+    }
+
+    [Fact]
+    public void NewProfileScrollHint_is_bottom_for_manual_top_for_newest_skip_for_alphabetical()
+    {
+        var home = new HomeViewModel();
+        Assert.Equal(0, home.NewProfileScrollHint);  // manual → scroll to end
+        home.CycleSort(); Assert.Equal(-1, home.NewProfileScrollHint); // A→Z → skip
+        home.CycleSort(); Assert.Equal(-1, home.NewProfileScrollHint); // Z→A → skip
+        home.CycleSort(); Assert.Equal(1,  home.NewProfileScrollHint); // newest-first → scroll to top
+        home.CycleSort(); Assert.Equal(0,  home.NewProfileScrollHint); // oldest-first → scroll to end
+    }
+
+    [Fact]
+    public void AddAutoSwitchProfile_stamps_CreatedAt()
+    {
+        var home = new HomeViewModel();
+        home.AutoSwitchProfiles.Clear();
+        var before = DateTime.UtcNow;
+        home.AddAutoSwitchProfile();
+        Assert.NotNull(home.AutoSwitchProfiles[0].CreatedAt);
+        Assert.True(home.AutoSwitchProfiles[0].CreatedAt >= before);
+    }
+
     // B9 regression: FilteredProfiles must not NRE when ExeName or Title is null.
     [Fact]
     public void FilteredProfiles_does_not_throw_when_profile_has_null_ExeName_or_Title()
