@@ -13,10 +13,15 @@ public class DelayedDeduplicateAction
         _cts?.Cancel();
         _cts?.Dispose();
         _cts = new CancellationTokenSource();
-        _ = Task.Delay(delayInMs, _cts.Token).ContinueWith(
-            _ => action(),
-            CancellationToken.None,
-            TaskContinuationOptions.OnlyOnRanToCompletion,
-            TaskScheduler.Default);
+        var token = _cts.Token;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(delayInMs, token);
+                await action();
+            }
+            catch (OperationCanceledException) { }
+        });
     }
 }
