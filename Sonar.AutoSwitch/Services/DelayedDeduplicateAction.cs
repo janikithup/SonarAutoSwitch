@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -6,28 +6,17 @@ namespace Sonar.AutoSwitch.Services;
 
 public class DelayedDeduplicateAction
 {
-    private readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
-    private CancellationTokenSource _cancellationToken;
+    private CancellationTokenSource? _cts;
 
     public void QueueAction(Func<Task> action, int delayInMs = 2000)
     {
-        _semaphoreSlim.Wait();
-        try
-        {
-            _cancellationToken?.Cancel();
-            _cancellationToken?.Dispose();
-            _cancellationToken = new CancellationTokenSource();
-            Task.Delay(delayInMs, _cancellationToken.Token).ContinueWith(async t =>
-            {
-                if (!t.IsCompletedSuccessfully || t.IsCanceled) return;
-                await _semaphoreSlim.WaitAsync();
-                await action().ContinueWith(_ => _).ConfigureAwait(false);
-                _semaphoreSlim.Release();
-            });
-        }
-        finally
-        {
-            _semaphoreSlim.Release();
-        }
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _cts = new CancellationTokenSource();
+        _ = Task.Delay(delayInMs, _cts.Token).ContinueWith(
+            _ => action(),
+            CancellationToken.None,
+            TaskContinuationOptions.OnlyOnRanToCompletion,
+            TaskScheduler.Default);
     }
 }

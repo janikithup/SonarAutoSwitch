@@ -46,8 +46,9 @@ public class StateManager
 #pragma warning disable IL2026
         T? loadState = !File.Exists(jsonPath) ? new T() : JsonSerializer.Deserialize<T>(File.ReadAllText(jsonPath));
 #pragma warning restore IL2026
-        _states[typeof(T)] = loadState;
-        return loadState!;
+        T state = loadState ?? new T();
+        _states[typeof(T)] = state;
+        return state;
     }
 
     public bool CheckStateExists<T>()
