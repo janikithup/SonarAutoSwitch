@@ -24,7 +24,7 @@ public class AutoSwitchProfilesDatabase
             await using Stream stream = await httpResponseMessage.Content.ReadAsStreamAsync();
             var githubConfigs = await JsonSerializer.DeserializeAsync<List<GitHubProfile>>(stream);
             var switchProfileViewModels = new List<AutoSwitchProfileViewModel>();
-            foreach ((string? sonarProfileName, string? exeName, string? title) in githubConfigs!)
+            foreach ((string? sonarProfileName, string? exeName, string? title) in githubConfigs ?? [])
             {
                 SonarGamingConfiguration? sonarGamingConfiguration =
                     SteelSeriesSonarService.Instance.AvailableGamingConfigurations.FirstOrDefault(s => s.Name == sonarProfileName);

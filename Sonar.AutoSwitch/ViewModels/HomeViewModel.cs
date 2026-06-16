@@ -22,7 +22,7 @@ public class HomeViewModel : ViewModelBase
     private int _sortDirection; // 0 = manual order, 1 = A→Z, -1 = Z→A
 
     public static IReadOnlyList<string> ProcessNames { get; } =
-        Process.GetProcesses().Select(p => p.ProcessName).Distinct().OrderBy(x => x).ToList();
+        Process.GetProcesses().Select(p => { var n = p.ProcessName; p.Dispose(); return n; }).Distinct().OrderBy(x => x).ToList();
 
     public HomeViewModel()
     {

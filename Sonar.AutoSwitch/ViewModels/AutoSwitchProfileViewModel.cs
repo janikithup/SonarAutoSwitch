@@ -18,6 +18,7 @@ public class AutoSwitchProfileViewModel : ViewModelBase
         get => _title;
         set
         {
+            value ??= "";
             if (value == _title) return;
             _title = value;
             OnPropertyChanged();
@@ -30,6 +31,7 @@ public class AutoSwitchProfileViewModel : ViewModelBase
         get => _exeName;
         set
         {
+            value ??= "";
             if (value == _exeName) return;
             _exeName = value;
             OnPropertyChanged();
