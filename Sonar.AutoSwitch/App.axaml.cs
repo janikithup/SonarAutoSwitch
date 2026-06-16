@@ -1,3 +1,4 @@
+using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -24,7 +25,7 @@ public class App : Application
         {
             desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
             desktop.MainWindow = new MainWindow();
-            if (firstLoad)
+            if (firstLoad || Array.IndexOf(desktop.Args ?? [], "--show") >= 0)
             {
                 desktop.MainWindow.Show();
                 StateManager.Instance.SaveState<SettingsViewModel>();
@@ -33,7 +34,7 @@ public class App : Application
 
         if (settingsViewModel.Enabled)
             AutoSwitchService.Instance.ToggleEnabled(settingsViewModel.Enabled);
-        if (settingsViewModel.StartAtStartup)
+        if (firstLoad && settingsViewModel.StartAtStartup)
             StartupService.RegisterInStartup(true);
 
         _ = AutoSwitchProfilesDatabase.Instance.LoadDatabaseAsync();

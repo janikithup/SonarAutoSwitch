@@ -34,7 +34,8 @@
                     <Expander IsExpanded="{Binding IsExpanded, Mode=TwoWay}"
                               HorizontalAlignment="Stretch"
                               HorizontalContentAlignment="Stretch"
-                              Margin="0,1">
+                              Margin="0,1"
+                              AutomationProperties.Name="{Binding DisplayName}">
                         <Expander.Header>
                             <TextBlock Text="{Binding DisplayName}" />
                         </Expander.Header>
@@ -53,7 +54,8 @@
                                             Watermark="e.g. Overwatch"
                                             FilterMode="Contains" MinimumPrefixLength="1"
                                             MaxDropDownHeight="200"
-                                            ItemsSource="{x:Static viewModels:HomeViewModel.ProcessNames}" />
+                                            ItemsSource="{x:Static viewModels:HomeViewModel.ProcessNames}"
+                                            AutomationProperties.Name="Game executable name" />
 
                             <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,12,0">
                                 <TextBlock Text="Window title:" />
@@ -62,7 +64,8 @@
                             </StackPanel>
                             <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Title}"
                                      VerticalAlignment="Top"
-                                     Watermark="e.g. Valorant, COD" />
+                                     Watermark="e.g. Valorant, COD"
+                                     AutomationProperties.Name="Window title" />
 
                             <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,12,0">
                                 <TextBlock Text="Sonar gaming config:" />
@@ -84,7 +87,8 @@
                                         Margin="0,12,0,0" HorizontalAlignment="Right" Spacing="8">
                                 <Button IsVisible="{Binding !IsConfirmingDelete}"
                                         Command="{Binding StartDelete}"
-                                        ToolTip.Tip="Delete this profile">
+                                        ToolTip.Tip="Delete this profile"
+                                        AutomationProperties.Name="Delete profile">
                                     <ui:SymbolIcon Symbol="Delete" />
                                 </Button>
                                 <StackPanel IsVisible="{Binding IsConfirmingDelete}"
