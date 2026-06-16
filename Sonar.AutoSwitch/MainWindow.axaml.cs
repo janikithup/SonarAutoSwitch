@@ -23,8 +23,17 @@ public partial class MainWindow : Window
     protected override void OnClosing(WindowClosingEventArgs e)
     {
         base.OnClosing(e);
-        Hide();
-        e.Cancel = true;
+        if (StateManager.Instance.GetOrLoadState<SettingsViewModel>().CloseToTray)
+        {
+            Hide();
+            e.Cancel = true;
+        }
+        else
+        {
+            if (App.Current?.ApplicationLifetime is
+                Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop)
+                desktop.Shutdown();
+        }
     }
 
     private void NavigationView_OnSelectionChanged(object? sender, NavigationViewSelectionChangedEventArgs e)

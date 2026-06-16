@@ -34,6 +34,19 @@ public class SettingsViewModel : ViewModelBase
 
     public bool UseGithubConfigs { get; set; } = true;
 
+    private bool _closeToTray = true;
+
+    public bool CloseToTray
+    {
+        get => _closeToTray;
+        set
+        {
+            if (value == _closeToTray) return;
+            _closeToTray = value;
+            OnPropertyChanged();
+        }
+    }
+
     protected override void OnPropertyChanged(string? propertyName = null)
     {
         base.OnPropertyChanged(propertyName);

@@ -32,6 +32,13 @@
                 <ToggleSwitch IsChecked="{Binding UseGithubConfigs}" />
             </ui:SettingsExpander.Footer>
         </ui:SettingsExpander>
+        <ui:SettingsExpander IconSource="HiddenMirrored" Header="Close to tray" IsExpanded="True"
+                             Description="Closing the window hides to tray instead of exiting"
+                             IsClickEnabled="False">
+            <ui:SettingsExpander.Footer>
+                <ToggleSwitch AutomationProperties.Name="CloseToTray" IsChecked="{Binding CloseToTray}" />
+            </ui:SettingsExpander.Footer>
+        </ui:SettingsExpander>
     </StackPanel>
 
 </UserControl>

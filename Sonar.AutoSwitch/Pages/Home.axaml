@@ -34,7 +34,26 @@
             </ComboBox.ItemTemplate>
         </ComboBox>
 
-        <ItemsControl DockPanel.Dock="Top" ItemsSource="{Binding AutoSwitchProfiles}"
+        <TextBox DockPanel.Dock="Top"
+                 Text="{Binding SearchText, Mode=TwoWay}"
+                 Watermark="Search profiles..."
+                 Margin="0,0,0,4"
+                 AutomationProperties.Name="Search profiles" />
+
+        <StackPanel Orientation="Horizontal" DockPanel.Dock="Top"
+                    Margin="0,0,0,8" Spacing="4">
+            <TextBlock Text="Sort:" VerticalAlignment="Center" Opacity="0.7" />
+            <Button Command="{Binding SortAscending}"
+                    IsEnabled="{Binding !SortAscendingActive}"
+                    ToolTip.Tip="Sort A to Z (display only)"
+                    AutomationProperties.Name="Sort A to Z">A-Z</Button>
+            <Button Command="{Binding SortDescending}"
+                    IsEnabled="{Binding !SortDescendingActive}"
+                    ToolTip.Tip="Sort Z to A (display only)"
+                    AutomationProperties.Name="Sort Z to A">Z-A</Button>
+        </StackPanel>
+
+        <ItemsControl DockPanel.Dock="Top" ItemsSource="{Binding FilteredProfiles}"
                       HorizontalAlignment="Stretch">
             <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="viewModels:AutoSwitchProfileViewModel">
