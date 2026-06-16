@@ -47,14 +47,20 @@ public class SettingsPageSmokeTest
         Assert.False(vm.CloseToTray);
     }
 
+    private static (Window, Settings) CreateWindow()
+    {
+        var w = new Window { Width = 600, Height = 500 };
+        var s = new Settings();
+        w.Content = s;
+        w.Show();
+        w.UpdateLayout();
+        return (w, s);
+    }
+
     [AvaloniaFact]
     public void Settings_check_updates_click_does_not_crash_and_shows_status()
     {
-        var window = new Window { Width = 600, Height = 500 };
-        var settings = new Settings();
-        window.Content = settings;
-        window.Show();
-        window.UpdateLayout();
+        var (window, settings) = CreateWindow();
 
         var updateStatus = settings.FindControl<TextBlock>("UpdateStatus")!;
         Assert.NotNull(updateStatus);
@@ -73,11 +79,7 @@ public class SettingsPageSmokeTest
     [AvaloniaFact]
     public void Settings_reset_confirm_panel_hidden_until_reset_clicked()
     {
-        var window = new Window { Width = 600, Height = 500 };
-        var settings = new Settings();
-        window.Content = settings;
-        window.Show();
-        window.UpdateLayout();
+        var (_, settings) = CreateWindow();
 
         var confirmPanel = settings.FindControl<StackPanel>("ResetConfirmPanel")!;
         Assert.NotNull(confirmPanel);
@@ -86,7 +88,7 @@ public class SettingsPageSmokeTest
         var resetBtn = settings.GetVisualDescendants().OfType<Button>()
             .First(b => b.GetValue(Avalonia.Automation.AutomationProperties.NameProperty)?.ToString() == "Reset to defaults");
         resetBtn.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-        window.UpdateLayout();
+        settings.UpdateLayout();
 
         Assert.True(confirmPanel.IsVisible, "Confirm panel should show after Reset clicked");
     }
@@ -115,11 +117,7 @@ public class SettingsPageSmokeTest
     [AvaloniaFact]
     public void Settings_open_log_click_does_not_crash()
     {
-        var window = new Window { Width = 600, Height = 500 };
-        var settings = new Settings();
-        window.Content = settings;
-        window.Show();
-        window.UpdateLayout();
+        var (_, settings) = CreateWindow();
 
         var updateStatus = settings.FindControl<TextBlock>("UpdateStatus")!;
         Assert.NotNull(updateStatus);
@@ -129,7 +127,7 @@ public class SettingsPageSmokeTest
 
         // Does not throw regardless of whether log file exists on this machine.
         btn.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-        window.UpdateLayout();
+        settings.UpdateLayout();
 
         // If file is absent, status says so. If present, status stays empty (file opens externally).
         Assert.True(updateStatus.Text is null or "" or "No log file yet.");

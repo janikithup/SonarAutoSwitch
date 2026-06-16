@@ -98,10 +98,7 @@ public partial class Settings : UserControl
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Sonar.AutoSwitch");
         foreach (var file in new[] { "HomeViewModel.json", "SettingsViewModel.json" })
-        {
-            var path = Path.Combine(folder, file);
-            if (File.Exists(path)) File.Delete(path);
-        }
+            File.Delete(Path.Combine(folder, file));
         if (Environment.ProcessPath is { } exe)
             Process.Start(new ProcessStartInfo(exe) { UseShellExecute = true });
         Environment.Exit(0);
