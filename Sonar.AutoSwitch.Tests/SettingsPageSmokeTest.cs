@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Text.Json;
+using Avalonia.Interactivity;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
@@ -47,6 +48,50 @@ public class SettingsPageSmokeTest
     }
 
     [AvaloniaFact]
+    public void Settings_check_updates_click_does_not_crash_and_shows_status()
+    {
+        var window = new Window { Width = 600, Height = 500 };
+        var settings = new Settings();
+        window.Content = settings;
+        window.Show();
+        window.UpdateLayout();
+
+        var updateStatus = settings.FindControl<TextBlock>("UpdateStatus")!;
+        Assert.NotNull(updateStatus);
+        Assert.True(string.IsNullOrEmpty(updateStatus.Text), "UpdateStatus should start empty");
+
+        // Click "Check for updates" — network will fail in test env, handler must catch and set status.
+        var btn = settings.GetVisualDescendants().OfType<Button>()
+            .First(b => b.GetValue(Avalonia.Automation.AutomationProperties.NameProperty)?.ToString() == "Check for updates");
+        btn.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        window.UpdateLayout();
+
+        // Immediately after click: "Checking..." (the await hasn't resolved yet).
+        Assert.Equal("Checking...", updateStatus.Text);
+    }
+
+    [AvaloniaFact]
+    public void Settings_reset_confirm_panel_hidden_until_reset_clicked()
+    {
+        var window = new Window { Width = 600, Height = 500 };
+        var settings = new Settings();
+        window.Content = settings;
+        window.Show();
+        window.UpdateLayout();
+
+        var confirmPanel = settings.FindControl<StackPanel>("ResetConfirmPanel")!;
+        Assert.NotNull(confirmPanel);
+        Assert.False(confirmPanel.IsVisible, "Confirm panel should be hidden initially");
+
+        var resetBtn = settings.GetVisualDescendants().OfType<Button>()
+            .First(b => b.GetValue(Avalonia.Automation.AutomationProperties.NameProperty)?.ToString() == "Reset to defaults");
+        resetBtn.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        window.UpdateLayout();
+
+        Assert.True(confirmPanel.IsVisible, "Confirm panel should show after Reset clicked");
+    }
+
+    [AvaloniaFact]
     public void Settings_toggles_reflect_viewmodel_state()
     {
         var window = new Window { Width = 600, Height = 500 };
@@ -65,5 +110,28 @@ public class SettingsPageSmokeTest
             t.GetValue(Avalonia.Automation.AutomationProperties.NameProperty)?.ToString() == "CloseToTray");
         Assert.NotNull(closeToTrayToggle);
         Assert.True(closeToTrayToggle!.IsChecked, "CloseToTray should default to true");
+    }
+
+    [AvaloniaFact]
+    public void Settings_open_log_click_does_not_crash()
+    {
+        var window = new Window { Width = 600, Height = 500 };
+        var settings = new Settings();
+        window.Content = settings;
+        window.Show();
+        window.UpdateLayout();
+
+        var updateStatus = settings.FindControl<TextBlock>("UpdateStatus")!;
+        Assert.NotNull(updateStatus);
+
+        var btn = settings.GetVisualDescendants().OfType<Button>()
+            .First(b => b.GetValue(Avalonia.Automation.AutomationProperties.NameProperty)?.ToString() == "Open log file");
+
+        // Does not throw regardless of whether log file exists on this machine.
+        btn.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        window.UpdateLayout();
+
+        // If file is absent, status says so. If present, status stays empty (file opens externally).
+        Assert.True(updateStatus.Text is null or "" or "No log file yet.");
     }
 }
