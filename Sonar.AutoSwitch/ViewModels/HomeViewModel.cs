@@ -27,7 +27,8 @@ public class HomeViewModel : ViewModelBase
     // Audio peak — ephemeral, drives EQ bar heights.
     private double _audioPeak;
     private bool _isDemo;
-    private double _demoPhase;
+    private volatile int _demoPhaseRaw; // scaled int avoids double data race; 1 unit ≈ 0.09 rad
+    private System.Threading.Timer? _demoTimer;
 
     public static IReadOnlyList<string> ProcessNames { get; } =
         Process.GetProcesses()
@@ -107,11 +108,12 @@ public class HomeViewModel : ViewModelBase
         {
             _isDemo = value;
             if (!value) return;
+            if (_demoTimer != null) return;
             AudioMeterService.Instance.PeakChanged -= OnAudioPeak;
-            new System.Threading.Timer(_ =>
+            _demoTimer = new System.Threading.Timer(_ =>
             {
-                _demoPhase += 0.09;
-                OnAudioPeak(null, (float)(0.3 + 0.65 * Math.Abs(Math.Sin(_demoPhase))));
+                var tick = System.Threading.Interlocked.Increment(ref _demoPhaseRaw);
+                OnAudioPeak(null, (float)(0.3 + 0.65 * Math.Abs(Math.Sin(tick * 0.09))));
             }, null, 0, 33);
         }
     }
