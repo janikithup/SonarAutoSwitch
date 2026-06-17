@@ -18,13 +18,6 @@ public class AutoSwitchProfileViewModel : ViewModelBase
     private bool _isConfirmingDelete;
     private bool _isAdvancedExpanded;
 
-    // Loaded once; SQLite hit is too slow to repeat on every ExeName keystroke.
-    private static readonly Lazy<IReadOnlyList<SonarGamingConfiguration>> _configCache = new(() =>
-    {
-        try { return SteelSeriesSonarService.Instance.AvailableGamingConfigurations.ToList(); }
-        catch { return []; }
-    });
-
     public string Title
     {
         get => _title;
@@ -190,7 +183,7 @@ public class AutoSwitchProfileViewModel : ViewModelBase
     {
         // Prefer exe name; fall back to window title if exe is blank.
         var term = !string.IsNullOrEmpty(_exeName) ? _exeName : _title;
-        var match = FindBestMatch(term, _configCache.Value);
+        var match = FindBestMatch(term, SteelSeriesSonarService.Instance.AvailableGamingConfigurations);
         if (match is null) return;
         SonarGamingConfiguration = match;   // setter no-ops if same config
         SonarMatchHint = $"Auto-matched: {match.Name}";

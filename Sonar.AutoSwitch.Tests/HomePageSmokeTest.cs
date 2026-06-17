@@ -121,6 +121,29 @@ public class HomePageSmokeTest
     }
 
     [AvaloniaFact]
+    public void Home_shows_sonar_status_dot_bound_to_status_brush()
+    {
+        var window = new Window { Width = 600, Height = 500 };
+        var home = new Home();
+        var vm = new HomeViewModel();
+        home.DataContext = vm;
+        window.Content = home;
+        window.Show();
+        window.UpdateLayout();
+
+        var dot = home.GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Ellipse>()
+            .FirstOrDefault(e => e.GetValue(Avalonia.Automation.AutomationProperties.NameProperty)?.ToString() == "Sonar connection status");
+        Assert.NotNull(dot);
+        // Idle by default → grey, and the binding actually resolved (not null).
+        Assert.Equal(Avalonia.Media.Brushes.Gray, dot!.Fill);
+
+        // Status change repaints the dot.
+        vm.SonarStatus = Sonar.AutoSwitch.Services.SonarConnectionStatus.Disconnected;
+        window.UpdateLayout();
+        Assert.Equal(Avalonia.Media.Brushes.OrangeRed, dot.Fill);
+    }
+
+    [AvaloniaFact]
     public void ExeName_autocomplete_has_process_list_and_opens_on_typing()
     {
         var window = new Window { Width = 600, Height = 500 };

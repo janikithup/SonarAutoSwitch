@@ -22,6 +22,10 @@ public partial class MainWindow : Window
         _homePage = new Home();
         _settingsPage = new Settings();
         _pageHost.Content = _homePage;
+        // Drop the cached Sonar config list on focus so configs added in Sonar GG
+        // appear on the next card render without an app restart. ponytail: cache
+        // invalidation only; live ComboBoxes refresh when their card next realizes.
+        Activated += (_, _) => SteelSeriesSonarService.Instance.RefreshGamingConfigurations();
     }
 
     public void ShowSettings() => _pageHost.Content = _settingsPage;

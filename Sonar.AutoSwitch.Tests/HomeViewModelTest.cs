@@ -1,10 +1,47 @@
 using System.Collections.Generic;
+using Avalonia.Media;
+using Sonar.AutoSwitch.Services;
 using Sonar.AutoSwitch.ViewModels;
 
 namespace Sonar.AutoSwitch.Tests;
 
 public class HomeViewModelTest
 {
+    [Fact]
+    public void SonarStatus_defaults_to_idle_grey()
+    {
+        var home = new HomeViewModel();
+        Assert.Equal(SonarConnectionStatus.Idle, home.SonarStatus);
+        Assert.Equal(Brushes.Gray, home.SonarStatusBrush);
+    }
+
+    [Fact]
+    public void SonarStatus_connected_is_green_with_a_reassuring_tooltip()
+    {
+        var home = new HomeViewModel { SonarStatus = SonarConnectionStatus.Connected };
+        Assert.Equal(Brushes.LimeGreen, home.SonarStatusBrush);
+        Assert.Contains("connected", home.SonarStatusTooltip, System.StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void SonarStatus_disconnected_is_red_and_names_the_likely_cause()
+    {
+        var home = new HomeViewModel { SonarStatus = SonarConnectionStatus.Disconnected };
+        Assert.Equal(Brushes.OrangeRed, home.SonarStatusBrush);
+        Assert.Contains("Sonar", home.SonarStatusTooltip);
+    }
+
+    [Fact]
+    public void SonarStatus_change_raises_brush_and_tooltip_notifications()
+    {
+        var home = new HomeViewModel();
+        var changed = new List<string?>();
+        home.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        home.SonarStatus = SonarConnectionStatus.Connected;
+        Assert.Contains(nameof(HomeViewModel.SonarStatusBrush), changed);
+        Assert.Contains(nameof(HomeViewModel.SonarStatusTooltip), changed);
+    }
+
     [Fact]
     public void CycleSort_cycles_through_four_modes_without_returning_to_unsorted()
     {

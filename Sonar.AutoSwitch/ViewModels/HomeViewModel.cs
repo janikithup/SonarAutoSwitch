@@ -5,7 +5,9 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
+using Avalonia.Media;
 using Sonar.AutoSwitch.Services;
 
 namespace Sonar.AutoSwitch.ViewModels;
@@ -17,6 +19,7 @@ public class HomeViewModel : ViewModelBase
 
     private SonarGamingConfiguration _defaultSonarGamingConfiguration = new(null, "unset");
     private SonarGamingConfiguration _activeProfile;
+    private SonarConnectionStatus _sonarStatus = SonarConnectionStatus.Idle;
     // Search + sort: ephemeral view state, not persisted to JSON.
     private string _searchText = string.Empty;
     private int _sortDirection; // 0 = manual order, 1 = A→Z, -1 = Z→A
@@ -75,6 +78,10 @@ public class HomeViewModel : ViewModelBase
         }
     }
 
+    // Set only by --demo: a fully-formed in-memory state that must not be touched by real Sonar reads.
+    [JsonIgnore]
+    public bool IsDemo { get; set; }
+
     [JsonIgnore]
     public SonarGamingConfiguration ActiveProfile
     {
@@ -86,6 +93,38 @@ public class HomeViewModel : ViewModelBase
             OnPropertyChanged();
         }
     }
+
+    // Connection status to Sonar, driven by AutoSwitchService after each switch attempt.
+    // Ephemeral: uses base.OnPropertyChanged to skip the SaveState path.
+    [JsonIgnore]
+    public SonarConnectionStatus SonarStatus
+    {
+        get => _sonarStatus;
+        set
+        {
+            if (_sonarStatus == value) return;
+            _sonarStatus = value;
+            base.OnPropertyChanged(nameof(SonarStatus));
+            base.OnPropertyChanged(nameof(SonarStatusBrush));
+            base.OnPropertyChanged(nameof(SonarStatusTooltip));
+        }
+    }
+
+    [JsonIgnore]
+    public IBrush SonarStatusBrush => _sonarStatus switch
+    {
+        SonarConnectionStatus.Connected => Brushes.LimeGreen,
+        SonarConnectionStatus.Disconnected => Brushes.OrangeRed,
+        _ => Brushes.Gray,
+    };
+
+    [JsonIgnore]
+    public string SonarStatusTooltip => _sonarStatus switch
+    {
+        SonarConnectionStatus.Connected => "Sonar connected — last switch succeeded",
+        SonarConnectionStatus.Disconnected => "Sonar not reachable — is SteelSeries GG running?",
+        _ => "Waiting for the first profile switch",
+    };
 
     [JsonIgnore]
     public string SearchText
@@ -148,6 +187,9 @@ public class HomeViewModel : ViewModelBase
     {
         bool firstLoad = !StateManager.Instance.CheckStateExists<HomeViewModel>();
         var homeViewModel = StateManager.Instance.GetOrLoadState<HomeViewModel>();
+        // Demo state is already fully formed (ActiveProfile, status, expanded card). Don't read
+        // the real Sonar DB — that would overwrite it and leak the user's real selected config.
+        if (homeViewModel.IsDemo) return homeViewModel;
         var steelSeriesSonarService = SteelSeriesSonarService.Instance;
         string selectedConfigId = steelSeriesSonarService.GetSelectedGamingConfiguration();
         var activeProfile = steelSeriesSonarService.GetGamingConfigurations()
@@ -225,12 +267,14 @@ public class HomeViewModel : ViewModelBase
         }
     }
 
-    protected override void OnPropertyChanged(string? propertyName = null)
+    protected override void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
         base.OnPropertyChanged(propertyName);
+        // ActiveProfile is ephemeral ([JsonIgnore]) and changes on every switch — notify but don't persist.
         if (propertyName is nameof(FilteredProfiles)
                          or nameof(SortModeLabel)
-                         or nameof(SortModeTooltip))
+                         or nameof(SortModeTooltip)
+                         or nameof(ActiveProfile))
             return;
         StateManager.Instance.SaveState<HomeViewModel>();
     }

@@ -76,6 +76,44 @@ public class StateManagerTest
         }
     }
 
+    // Distinct type so marking it read-only can't leak into the TestPayload tests above.
+    private class ReadOnlyPayload { public string Value { get; set; } = ""; }
+
+    private static string ReadOnlyPath =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Sonar.AutoSwitch", "ReadOnlyPayload.json");
+
+    [Fact]
+    public void SeedReadOnly_serves_the_instance_and_never_writes_to_disk()
+    {
+        if (File.Exists(ReadOnlyPath)) File.Delete(ReadOnlyPath);
+        try
+        {
+            var payload = new ReadOnlyPayload { Value = "demo" };
+            StateManager.Instance.SeedReadOnly(payload);
+
+            // Served from the seed without touching disk.
+            Assert.Same(payload, StateManager.Instance.GetOrLoadState<ReadOnlyPayload>());
+
+            // Both save paths are no-ops for read-only state.
+            StateManager.Instance.SaveStateNow<ReadOnlyPayload>();
+            StateManager.Instance.SaveState<ReadOnlyPayload>();
+            Assert.False(File.Exists(ReadOnlyPath), "read-only state must never hit disk");
+        }
+        finally
+        {
+            var states = (Dictionary<Type, object?>)typeof(StateManager)
+                .GetField("_states", BindingFlags.NonPublic | BindingFlags.Instance)!
+                .GetValue(StateManager.Instance)!;
+            states.Remove(typeof(ReadOnlyPayload));
+            var ro = (HashSet<Type>)typeof(StateManager)
+                .GetField("_readOnly", BindingFlags.NonPublic | BindingFlags.Instance)!
+                .GetValue(StateManager.Instance)!;
+            ro.Remove(typeof(ReadOnlyPayload));
+            if (File.Exists(ReadOnlyPath)) File.Delete(ReadOnlyPath);
+        }
+    }
+
     [Fact]
     public void CheckStateExists_reflects_file_presence()
     {

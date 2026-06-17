@@ -19,10 +19,16 @@
     </UserControl.Styles>
     <DockPanel>
 
-        <!-- Header: active config (or inline search) | search toggle | settings gear -->
-        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto" Margin="0,8,0,8">
+        <!-- Header: status dot | active config (or inline search) | search toggle | settings gear -->
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,8,0,8">
+            <!-- Sonar connection status — green ok / red unreachable / grey idle -->
+            <Ellipse Grid.Column="0" Width="10" Height="10"
+                     VerticalAlignment="Center" Margin="2,0,8,0"
+                     Fill="{Binding SonarStatusBrush}"
+                     ToolTip.Tip="{Binding SonarStatusTooltip}"
+                     AutomationProperties.Name="Sonar connection status" />
             <!-- Active config label — hidden when searching -->
-            <StackPanel Grid.Column="0" Name="ActiveConfigPanel"
+            <StackPanel Grid.Column="1" Name="ActiveConfigPanel"
                         Orientation="Horizontal" VerticalAlignment="Center" Spacing="4">
                 <TextBlock Text="Active config:" VerticalAlignment="Center" Opacity="0.7" />
                 <TextBlock Text="{Binding ActiveProfile.Name}" FontWeight="Bold"
@@ -31,20 +37,20 @@
                            TextTrimming="CharacterEllipsis" />
             </StackPanel>
             <!-- Inline search box — shown when searching -->
-            <TextBox Grid.Column="0" Name="SearchBox"
+            <TextBox Grid.Column="1" Name="SearchBox"
                      IsVisible="False"
                      Text="{Binding SearchText, Mode=TwoWay}"
                      Watermark="Search profiles..."
                      VerticalAlignment="Center"
                      AutomationProperties.Name="Search profiles" />
-            <ToggleButton Grid.Column="1" Name="SearchToggle"
+            <ToggleButton Grid.Column="2" Name="SearchToggle"
                           Click="SearchToggle_Click"
                           ToolTip.Tip="Search profiles"
                           VerticalAlignment="Center"
                           AutomationProperties.Name="Toggle search">
                 <ui:SymbolIcon Symbol="Find" />
             </ToggleButton>
-            <Button Grid.Column="2"
+            <Button Grid.Column="3"
                     Click="OpenSettings_Click"
                     ToolTip.Tip="Settings"
                     VerticalAlignment="Center"

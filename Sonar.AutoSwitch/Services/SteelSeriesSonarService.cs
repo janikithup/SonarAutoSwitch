@@ -18,9 +18,14 @@ public class SteelSeriesSonarService
     private static readonly HttpClient _httpClient = new HttpClient();
     private readonly string _connectionString;
     private int? _lastWorkingPort;
+    private IReadOnlyList<SonarGamingConfiguration>? _cachedConfigs;
+
+    // Source of the config list. Defaults to the real SQLite read; swappable in tests.
+    internal Func<IEnumerable<SonarGamingConfiguration>> ConfigQuery { get; set; }
 
     public SteelSeriesSonarService()
     {
+        ConfigQuery = GetGamingConfigurations;
         _connectionString = new SqliteConnectionStringBuilder
         {
             DataSource = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
@@ -30,8 +35,20 @@ public class SteelSeriesSonarService
 
     public static SteelSeriesSonarService Instance { get; } = new();
 
-    public IEnumerable<SonarGamingConfiguration> AvailableGamingConfigurations =>
-        GetGamingConfigurations().OrderBy(s => s.Name);
+    // Cached: the bound ItemsSource in Home.axaml is evaluated once per profile card,
+    // and Sonar's SQLite DB is a single-writer file we must not hammer. One read per
+    // session; RefreshGamingConfigurations() invalidates when configs may have changed.
+    public IReadOnlyList<SonarGamingConfiguration> AvailableGamingConfigurations
+    {
+        get
+        {
+            if (_cachedConfigs != null) return _cachedConfigs;
+            try { return _cachedConfigs = ConfigQuery().OrderBy(s => s.Name).ToList(); }
+            catch { return []; }  // degrade gracefully; don't cache a transient failure
+        }
+    }
+
+    public void RefreshGamingConfigurations() => _cachedConfigs = null;
 
     public IEnumerable<SonarGamingConfiguration> GetGamingConfigurations()
     {
@@ -50,11 +67,12 @@ public class SteelSeriesSonarService
         }
     }
 
-    public async Task ChangeSelectedGamingConfiguration(SonarGamingConfiguration sonarGamingConfiguration,
+    /// <returns>true if Sonar acknowledged the switch (HTTP 200); false if it was unreachable.</returns>
+    public async Task<bool> ChangeSelectedGamingConfiguration(SonarGamingConfiguration sonarGamingConfiguration,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(sonarGamingConfiguration.Id))
-            return;
+            return false;
 
         var sw = Stopwatch.StartNew();
 
@@ -62,7 +80,7 @@ public class SteelSeriesSonarService
         if (_lastWorkingPort != null)
         {
             AutoSwitchService.Log($"PortScan: 0ms, cachedPort={_lastWorkingPort.Value}");
-            if (cancellationToken.IsCancellationRequested) return;
+            if (cancellationToken.IsCancellationRequested) return false;
             var t0 = sw.ElapsedMilliseconds;
             HttpResponseMessage? resp = null;
             try { resp = await _httpClient.PutAsync($"http://localhost:{_lastWorkingPort.Value}/configs/{sonarGamingConfiguration.Id}/select", new StringContent(""), cancellationToken); }
@@ -73,10 +91,10 @@ public class SteelSeriesSonarService
                 if (resp?.StatusCode == HttpStatusCode.OK)
                 {
                     AutoSwitchService.Log($"ChangeConfig: ok [{sw.ElapsedMilliseconds}ms total]");
-                    return;
+                    return true;
                 }
             }
-            if (cancellationToken.IsCancellationRequested) return;
+            if (cancellationToken.IsCancellationRequested) return false;
             // Cached port is stale (Sonar restarted). Clear and fall through to full scan.
             _lastWorkingPort = null;
         }
@@ -86,7 +104,7 @@ public class SteelSeriesSonarService
         if (procs.Length <= 0 || cancellationToken.IsCancellationRequested)
         {
             foreach (var p in procs) p.Dispose();
-            return;
+            return false;
         }
 
         IEnumerable<int> potentialPorts = procs.SelectMany(p => NetworkHelper.GetPortById(p.Id, false));
@@ -115,6 +133,7 @@ public class SteelSeriesSonarService
         foreach (var p in procs) p.Dispose();
         if (!switched) _lastWorkingPort = null;
         AutoSwitchService.Log($"ChangeConfig: {(switched ? "ok" : "failed")} [{sw.ElapsedMilliseconds}ms total]");
+        return switched;
     }
 
     public string GetSelectedGamingConfiguration()

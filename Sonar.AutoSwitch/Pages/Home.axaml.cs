@@ -18,6 +18,7 @@ public partial class Home : UserControl
     private readonly StackPanel _activeConfigPanel;
     private readonly TextBox _searchBox;
     private readonly ToggleButton _searchToggle;
+    private HomeViewModel? _hookedVm;
 
     public Home()
     {
@@ -27,8 +28,9 @@ public partial class Home : UserControl
         _searchBox = this.FindControl<TextBox>("SearchBox")!;
         _searchToggle = this.FindControl<ToggleButton>("SearchToggle")!;
 
-        if (DataContext is HomeViewModel vm)
-            vm.PropertyChanged += OnViewModelChanged;
+        // Follow the active DataContext so the title tracks switches (and so tests can inject a VM).
+        DataContextChanged += (_, _) => HookViewModel();
+        HookViewModel();
     }
 
     private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
@@ -36,6 +38,14 @@ public partial class Home : UserControl
     protected override void OnAttachedToVisualTree(Avalonia.VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
+        SyncWindowTitle();
+    }
+
+    private void HookViewModel()
+    {
+        if (_hookedVm != null) _hookedVm.PropertyChanged -= OnViewModelChanged;
+        _hookedVm = DataContext as HomeViewModel;
+        if (_hookedVm != null) _hookedVm.PropertyChanged += OnViewModelChanged;
         SyncWindowTitle();
     }
 

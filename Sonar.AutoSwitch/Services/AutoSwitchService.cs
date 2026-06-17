@@ -51,6 +51,13 @@ public class AutoSwitchService
         catch { }
     }
 
+    // The status a completed switch should set, or null when it was canceled (superseded by a
+    // newer switch) and the dot should be left alone. A canceled switch is not a Sonar failure.
+    internal static SonarConnectionStatus? StatusForSwitch(bool switched, bool canceled) =>
+        canceled ? null
+        : switched ? SonarConnectionStatus.Connected
+        : SonarConnectionStatus.Disconnected;
+
     public static bool ProfileMatches(AutoSwitchProfileViewModel p, string? exeName, string title) =>
         (string.IsNullOrEmpty(p.ExeName) || string.Equals(p.ExeName, exeName, StringComparison.OrdinalIgnoreCase)) &&
         (string.IsNullOrEmpty(p.Title) || title.Contains(p.Title, StringComparison.OrdinalIgnoreCase));
@@ -71,6 +78,7 @@ public class AutoSwitchService
             _cancellationTokenSource?.Cancel();
             _cancellationTokenSource?.Dispose();
             _cancellationTokenSource = new CancellationTokenSource();
+            var token = _cancellationTokenSource.Token;   // this switch's token, even if a newer one replaces it
             await _semaphoreSlim.WaitAsync();
             try
             {
@@ -104,16 +112,24 @@ public class AutoSwitchService
                     _selectedGamingConfiguration = sonarGamingConfiguration;
                     if (sonarGamingConfiguration.Id == selectedGamingConfigurationId)
                     {
+                        // DB was readable and we're already on the right config — Sonar is up.
+                        _homeViewModel.SonarStatus = SonarConnectionStatus.Connected;
                         Log("Already correct, skipping");
                         return;
                     }
                     Log($"Switching to {sonarGamingConfiguration.Name}... [{sw.ElapsedMilliseconds}ms]");
-                    await SteelSeriesSonarService.Instance.ChangeSelectedGamingConfiguration(sonarGamingConfiguration,
-                        _cancellationTokenSource.Token);
+                    bool switched = await SteelSeriesSonarService.Instance.ChangeSelectedGamingConfiguration(
+                        sonarGamingConfiguration, token);
+                    // A superseded (canceled) switch isn't a failure — leave the dot for the newer switch.
+                    if (StatusForSwitch(switched, token.IsCancellationRequested) is { } status)
+                        _homeViewModel.SonarStatus = status;
                     Log($"Switch complete [{sw.ElapsedMilliseconds}ms]");
                 }
                 catch (Exception ex)
                 {
+                    // A canceled (superseded) operation is not a real failure; only real errors mean Sonar is down.
+                    if (ex is not OperationCanceledException)
+                        _homeViewModel.SonarStatus = SonarConnectionStatus.Disconnected;
                     Log($"ERROR: {ex.GetType().Name}: {ex.Message}");
                 }
             }

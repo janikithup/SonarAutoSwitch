@@ -10,6 +10,7 @@ public class StateManager
     private readonly string _appDataPath;
     private readonly Dictionary<Type, DelayedDeduplicateAction> _saveActions = new();
     private readonly Dictionary<Type, object?> _states = new();
+    private readonly HashSet<Type> _readOnly = new();
 
 
     private StateManager()
@@ -20,8 +21,17 @@ public class StateManager
 
     public static StateManager Instance { get; } = new();
 
+    // Pre-populate the cache with an in-memory instance that must never be persisted.
+    // Used by --demo so the screenshot run never reads or writes the user's real state.
+    public void SeedReadOnly<T>(T state)
+    {
+        _states[typeof(T)] = state;
+        _readOnly.Add(typeof(T));
+    }
+
     public void SaveState<T>()
     {
+        if (_readOnly.Contains(typeof(T))) return;
         if (GetState<T>() is not { } state)
             return;
 
@@ -41,6 +51,7 @@ public class StateManager
 
     public void SaveStateNow<T>()
     {
+        if (_readOnly.Contains(typeof(T))) return;
         if (GetState<T>() is not { } state) return;
         if (!Directory.Exists(_appDataPath)) Directory.CreateDirectory(_appDataPath);
         string jsonPath = Path.Combine(_appDataPath, typeof(T).Name + ".json");
