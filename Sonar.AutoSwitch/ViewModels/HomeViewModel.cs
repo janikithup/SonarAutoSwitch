@@ -26,6 +26,8 @@ public class HomeViewModel : ViewModelBase
     private int _sortDirection; // 0 = manual order, 1 = A→Z, -1 = Z→A
     // Audio peak — ephemeral, drives EQ bar heights.
     private double _audioPeak;
+    private bool _isDemo;
+    private double _demoPhase;
 
     public static IReadOnlyList<string> ProcessNames { get; } =
         Process.GetProcesses()
@@ -96,9 +98,23 @@ public class HomeViewModel : ViewModelBase
         }
     }
 
-    // Set only by --demo: a fully-formed in-memory state that must not be touched by real Sonar reads.
+    // Set only by --demo: swaps real AudioMeterService for a fake oscillating peak so EQ bars animate.
     [JsonIgnore]
-    public bool IsDemo { get; set; }
+    public bool IsDemo
+    {
+        get => _isDemo;
+        set
+        {
+            _isDemo = value;
+            if (!value) return;
+            AudioMeterService.Instance.PeakChanged -= OnAudioPeak;
+            new System.Threading.Timer(_ =>
+            {
+                _demoPhase += 0.09;
+                OnAudioPeak(null, (float)(0.3 + 0.65 * Math.Abs(Math.Sin(_demoPhase))));
+            }, null, 0, 33);
+        }
+    }
 
     [JsonIgnore]
     public SonarGamingConfiguration ActiveProfile
