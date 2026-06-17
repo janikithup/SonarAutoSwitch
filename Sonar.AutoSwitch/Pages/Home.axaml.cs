@@ -61,7 +61,7 @@ public partial class Home : UserControl
         base.OnPointerPressed(e);
         // Clear TextBox focus when clicking outside any TextBox
         if ((e.Source as Avalonia.Visual)?.FindAncestorOfType<TextBox>(includeSelf: true) is null)
-            TopLevel.GetTopLevel(this)?.Focus();
+            this.Focus();
     }
 
     private void OpenSettings_Click(object? sender, RoutedEventArgs e) =>

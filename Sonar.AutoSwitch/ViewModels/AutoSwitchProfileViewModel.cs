@@ -18,6 +18,7 @@ public class AutoSwitchProfileViewModel : ViewModelBase
     private bool _isConfirmingDelete;
     private bool _isAdvancedExpanded;
     private bool _isActive;
+    private bool _titleMatchOr;
 
     public string Title
     {
@@ -67,6 +68,17 @@ public class AutoSwitchProfileViewModel : ViewModelBase
             OnPropertyChanged(nameof(SonarGamingConfiguration));
             OnPropertyChanged(nameof(IsIncomplete));
             OnPropertyChanged(nameof(HasSonarConfig));
+        }
+    }
+
+    public bool TitleMatchOr
+    {
+        get => _titleMatchOr;
+        set
+        {
+            if (value == _titleMatchOr) return;
+            _titleMatchOr = value;
+            OnPropertyChanged();
         }
     }
 

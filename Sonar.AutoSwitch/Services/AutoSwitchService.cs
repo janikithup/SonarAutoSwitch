@@ -65,9 +65,17 @@ public class AutoSwitchService
         : switched ? SonarConnectionStatus.Connected
         : SonarConnectionStatus.Disconnected;
 
-    public static bool ProfileMatches(AutoSwitchProfileViewModel p, string? exeName, string title) =>
-        (string.IsNullOrEmpty(p.ExeName) || string.Equals(p.ExeName, exeName, StringComparison.OrdinalIgnoreCase)) &&
-        (string.IsNullOrEmpty(p.Title) || title.Contains(p.Title, StringComparison.OrdinalIgnoreCase));
+    public static bool ProfileMatches(AutoSwitchProfileViewModel p, string? exeName, string title)
+    {
+        bool exeOk = string.IsNullOrEmpty(p.ExeName) || string.Equals(p.ExeName, exeName, StringComparison.OrdinalIgnoreCase);
+        bool titleOk = string.IsNullOrEmpty(p.Title) || title.Contains(p.Title, StringComparison.OrdinalIgnoreCase);
+        if (!p.TitleMatchOr) return exeOk && titleOk;
+        // OR: each non-empty field is an independent condition; any hit suffices.
+        bool exeHit = !string.IsNullOrEmpty(p.ExeName) && string.Equals(p.ExeName, exeName, StringComparison.OrdinalIgnoreCase);
+        bool titleHit = !string.IsNullOrEmpty(p.Title) && title.Contains(p.Title, StringComparison.OrdinalIgnoreCase);
+        bool anyFilled = !string.IsNullOrEmpty(p.ExeName) || !string.IsNullOrEmpty(p.Title);
+        return !anyFilled || exeHit || titleHit;
+    }
 
     private async void InstanceOnForegroundWindowChanged(object? sender, WindowInfo e)
     {

@@ -95,12 +95,9 @@ public class Win32WindowEventManager
 
     private static string GetWindowTitle(nint hWnd)
     {
-        int textLength = GetWindowTextLength(hWnd);
-        var stringBuilder = new StringBuilder(textLength + 1);
-        // Getting the window's title
-        GetWindowText(hWnd, stringBuilder, stringBuilder.Capacity);
-        var title = stringBuilder.ToString();
-        return title;
+        var sb = new StringBuilder(GetWindowTextLength(hWnd) + 1);
+        GetWindowText(hWnd, sb, sb.Capacity);
+        return sb.ToString();
     }
 
 

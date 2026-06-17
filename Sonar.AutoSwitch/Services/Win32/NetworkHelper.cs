@@ -1,140 +1,60 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.InteropServices;
 
 namespace Sonar.AutoSwitch.Services.Win32;
 
 public class NetworkHelper
 {
-// https://msdn2.microsoft.com/en-us/library/aa366386.aspx
-    public enum TCP_TABLE_CLASS
-    {
-        TCP_TABLE_BASIC_LISTENER,
-        TCP_TABLE_BASIC_CONNECTIONS,
-        TCP_TABLE_BASIC_ALL,
-        TCP_TABLE_OWNER_PID_LISTENER,
-        TCP_TABLE_OWNER_PID_CONNECTIONS,
-        TCP_TABLE_OWNER_PID_ALL,
-        TCP_TABLE_OWNER_MODULE_LISTENER,
-        TCP_TABLE_OWNER_MODULE_CONNECTIONS,
-        TCP_TABLE_OWNER_MODULE_ALL
-    }
-
     public static IEnumerable<int> GetPortById(int pid, bool isRemote = true)
     {
-        var mibTcprowOwnerPids = IPHelperWrapper.GetAllTCPv4Connections();
-        foreach (var mibTcprowOwnerPid in mibTcprowOwnerPids)
+        foreach (var row in GetAllTCPv4Connections())
         {
-            if (mibTcprowOwnerPid.owningPid == pid)
-            {
-                int portById = GetPort(isRemote ? mibTcprowOwnerPid.remotePort : mibTcprowOwnerPid.localPort);
-                if (portById == 0)
-                    continue;
-                yield return portById;
-            }
+            if (row.owningPid != pid) continue;
+            var portBytes = isRemote ? row.remotePort : row.localPort;
+            int port = (portBytes[0] << 8) | portBytes[1];
+            if (port != 0) yield return port;
         }
     }
 
-    public static int GetPort(byte[] bytes)
+    private static List<MIB_TCPROW_OWNER_PID> GetAllTCPv4Connections()
     {
-        ushort num = BitConverter.ToUInt16(bytes, 0);
-        return (int) (((num & 0xFF000000) >> 8) | ((num & 0x00FF0000) << 8) | ((num & 0x0000FF00) >> 8) |
-                      ((num & 0x000000FF) << 8));
+        int buffSize = 0;
+        GetExtendedTcpTable(IntPtr.Zero, ref buffSize, true, AF_INET, TCP_TABLE_OWNER_PID_ALL);
+        var ptr = Marshal.AllocHGlobal(buffSize);
+        try
+        {
+            if (GetExtendedTcpTable(ptr, ref buffSize, true, AF_INET, TCP_TABLE_OWNER_PID_ALL) != 0)
+                return [];
+            uint count = (uint)Marshal.ReadInt32(ptr);
+            var rows = new List<MIB_TCPROW_OWNER_PID>((int)count);
+            int rowSize = Marshal.SizeOf<MIB_TCPROW_OWNER_PID>();
+            nint rowPtr = (nint)ptr + 4;
+            for (uint i = 0; i < count; i++, rowPtr += rowSize)
+                rows.Add(Marshal.PtrToStructure<MIB_TCPROW_OWNER_PID>((IntPtr)rowPtr));
+            return rows;
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(ptr);
+        }
     }
 
-    // https://msdn2.microsoft.com/en-us/library/aa366913.aspx
     [StructLayout(LayoutKind.Sequential)]
-    public struct
-        MIB_TCPROW_OWNER_PID
+    private struct MIB_TCPROW_OWNER_PID
     {
         public uint state;
         public uint localAddr;
-
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 4)]
-        public byte[] localPort;
-
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 4)] public byte[] localPort;
         public uint remoteAddr;
-
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 4)]
-        public byte[] remotePort;
-
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 4)] public byte[] remotePort;
         public uint owningPid;
     }
 
-// https://msdn2.microsoft.com/en-us/library/aa366921.aspx
-    [StructLayout(LayoutKind.Sequential)]
-    public struct MIB_TCPTABLE_OWNER_PID
-    {
-        public uint dwNumEntries;
+    private const int AF_INET = 2;
+    private const int TCP_TABLE_OWNER_PID_ALL = 5;
 
-        [MarshalAs(UnmanagedType.ByValArray, ArraySubType = UnmanagedType.Struct, SizeConst = 1)]
-        public MIB_TCPROW_OWNER_PID[] table;
-    }
-
-    public static class IPHelperAPI
-    {
-        [DllImport("iphlpapi.dll", SetLastError = true)]
-        internal static extern uint GetExtendedTcpTable(
-            IntPtr tcpTable,
-            ref int tcpTableLength,
-            bool sort,
-            int ipVersion,
-            TCP_TABLE_CLASS tcpTableType,
-            int reserved = 0);
-    }
-
-    public static class IPHelperWrapper
-    {
-        public const int AF_INET = 2; // IP_v4 = System.Net.Sockets.AddressFamily.InterNetwork
-
-        public static List<MIB_TCPROW_OWNER_PID> GetAllTCPv4Connections()
-        {
-            return GetTCPConnections<MIB_TCPROW_OWNER_PID, MIB_TCPTABLE_OWNER_PID>(AF_INET);
-        }
-
-        public static List<IPR> GetTCPConnections<IPR, IPT>(int ipVersion)
-        {
-            //IPR = Row Type, IPT = Table Type
-
-            IPR[] tableRows;
-            int buffSize = 0;
-            var dwNumEntriesField = typeof(IPT).GetField("dwNumEntries");
-
-            // how much memory do we need?
-            uint ret = IPHelperAPI.GetExtendedTcpTable(IntPtr.Zero, ref buffSize, true, ipVersion,
-                TCP_TABLE_CLASS.TCP_TABLE_OWNER_PID_ALL);
-            IntPtr tcpTablePtr = Marshal.AllocHGlobal(buffSize);
-
-            try
-            {
-                ret = IPHelperAPI.GetExtendedTcpTable(tcpTablePtr, ref buffSize, true, ipVersion,
-                    TCP_TABLE_CLASS.TCP_TABLE_OWNER_PID_ALL);
-                if (ret != 0) return new List<IPR>();
-
-                // get the number of entries in the table
-                IPT table = (IPT) Marshal.PtrToStructure(tcpTablePtr, typeof(IPT));
-                int rowStructSize = Marshal.SizeOf(typeof(IPR));
-                uint numEntries = (uint) dwNumEntriesField.GetValue(table);
-
-                // buffer we will be returning
-                tableRows = new IPR[numEntries];
-
-                IntPtr rowPtr = (IntPtr) ((long) tcpTablePtr + 4);
-                for (int i = 0; i < numEntries; i++)
-                {
-                    IPR tcpRow = (IPR) Marshal.PtrToStructure(rowPtr, typeof(IPR));
-                    tableRows[i] = tcpRow;
-                    rowPtr = (IntPtr) ((long) rowPtr + rowStructSize); // next entry
-                }
-            }
-            finally
-            {
-                // Free the Memory
-                Marshal.FreeHGlobal(tcpTablePtr);
-            }
-
-            return tableRows != null ? tableRows.ToList() : new List<IPR>();
-        }
-    } // wrapper class
+    [DllImport("iphlpapi.dll", SetLastError = true)]
+    private static extern uint GetExtendedTcpTable(IntPtr tcpTable, ref int tcpTableLength,
+        bool sort, int ipVersion, int tcpTableType, int reserved = 0);
 }

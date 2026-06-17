@@ -9,7 +9,8 @@
              x:Class="Sonar.AutoSwitch.Pages.Home"
              x:CompileBindings="True"
              x:DataType="viewModels:HomeViewModel"
-             Focusable="True">
+             Focusable="True"
+             Background="Transparent">
     <UserControl.Styles>
         <Style Selector="Expander /template/ ToggleButton#ExpanderHeader">
             <Setter Property="AutomationProperties.Name"
@@ -303,10 +304,15 @@
                                       Margin="0,4,0,0"
                                       AutomationProperties.Name="Advanced matching options">
                                 <StackPanel Spacing="4" Margin="0,4,0,0">
-                                    <TextBlock Text="Window title:" FontSize="11" Opacity="0.65" />
+                                    <TextBlock Text="Window title contains:" FontSize="11" Opacity="0.65" />
                                     <TextBox Text="{Binding Title}"
                                              Watermark="e.g. Valorant"
                                              AutomationProperties.Name="Window title" />
+                                    <CheckBox IsChecked="{Binding TitleMatchOr}"
+                                              Content="Either condition matches (OR)"
+                                              FontSize="11"
+                                              Margin="0,2,0,0"
+                                              AutomationProperties.Name="Match mode OR" />
                                 </StackPanel>
                             </Expander>
 

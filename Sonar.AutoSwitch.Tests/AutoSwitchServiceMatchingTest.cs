@@ -6,8 +6,8 @@ namespace Sonar.AutoSwitch.Tests;
 public class AutoSwitchServiceMatchingTest
 {
     // Helper: create a profile with the given ExeName and Title (empty string = wildcard).
-    private static AutoSwitchProfileViewModel Profile(string exeName, string title) =>
-        new AutoSwitchProfileViewModel { ExeName = exeName, Title = title };
+    private static AutoSwitchProfileViewModel Profile(string exeName, string title, bool orMode = false) =>
+        new AutoSwitchProfileViewModel { ExeName = exeName, Title = title, TitleMatchOr = orMode };
 
     // 1. Empty ExeName matches any exe
     [Fact]
@@ -94,5 +94,37 @@ public class AutoSwitchServiceMatchingTest
     {
         var p = Profile("MyGame", "");
         Assert.False(AutoSwitchService.ProfileMatches(p, null, "any title"));
+    }
+
+    // OR mode: exe matches, title does not → still matches
+    [Fact]
+    public void OR_mode_exe_match_is_sufficient()
+    {
+        var p = Profile("MyGame", "Lobby", orMode: true);
+        Assert.True(AutoSwitchService.ProfileMatches(p, "mygame", "Main Menu"));
+    }
+
+    // OR mode: title matches, exe does not → still matches
+    [Fact]
+    public void OR_mode_title_match_is_sufficient()
+    {
+        var p = Profile("MyGame", "Lobby", orMode: true);
+        Assert.True(AutoSwitchService.ProfileMatches(p, "OtherGame", "Game Lobby Screen"));
+    }
+
+    // OR mode: neither matches → no match
+    [Fact]
+    public void OR_mode_neither_match_returns_false()
+    {
+        var p = Profile("MyGame", "Lobby", orMode: true);
+        Assert.False(AutoSwitchService.ProfileMatches(p, "OtherGame", "Main Menu"));
+    }
+
+    // OR mode: both fields empty → wildcard (always matches)
+    [Fact]
+    public void OR_mode_both_empty_is_wildcard()
+    {
+        var p = Profile("", "", orMode: true);
+        Assert.True(AutoSwitchService.ProfileMatches(p, "AnyGame", "Any Title"));
     }
 }

@@ -57,7 +57,7 @@ public class SteelSeriesSonarService
         sqliteConnection.Open();
 
         using SqliteCommand sqliteCommand = sqliteConnection.CreateCommand();
-        sqliteCommand.CommandText = "select id, name, vad from configs where vad == 1";
+        sqliteCommand.CommandText = "select id, name from configs where vad = 1";
         using SqliteDataReader sqliteDataReader = sqliteCommand.ExecuteReader();
         while (sqliteDataReader.Read())
         {

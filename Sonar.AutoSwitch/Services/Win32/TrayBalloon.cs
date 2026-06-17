@@ -1,8 +1,8 @@
 using System;
-using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Avalonia.Threading;
+using Sonar.AutoSwitch.Services;
 
 namespace Sonar.AutoSwitch.Services.Win32;
 
@@ -53,30 +53,23 @@ static class TrayBalloon
     const uint NOTIFYICON_VERSION_4 = 4;
     static readonly IntPtr HWND_MESSAGE = new(-3);
 
-    static readonly string LogPath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "Sonar.AutoSwitch", "debug.log");
-
-    static void Log(string msg) =>
-        File.AppendAllText(LogPath, $"{DateTime.Now:HH:mm:ss.fff} TrayBalloon: {msg}\n");
-
     public static void Show(string title, string text)
     {
         var hwnd = CreateWindowEx(0, "STATIC", null, 0x80000000u,
             0, 0, 0, 0, HWND_MESSAGE, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
         if (hwnd == IntPtr.Zero)
         {
-            Log($"CreateWindowEx failed err={Marshal.GetLastWin32Error()}");
+            AutoSwitchService.Log($"TrayBalloon: CreateWindowEx failed err={Marshal.GetLastWin32Error()}");
             return;
         }
 
         var hIcon = ExtractIcon(IntPtr.Zero, Environment.ProcessPath ?? "", 0);
         if (hIcon == IntPtr.Zero)
         {
-            Log($"ExtractIcon failed err={Marshal.GetLastWin32Error()}, falling back to IDI_APPLICATION");
+            AutoSwitchService.Log($"TrayBalloon: ExtractIcon failed err={Marshal.GetLastWin32Error()}, falling back to IDI_APPLICATION");
             hIcon = LoadIcon(IntPtr.Zero, new IntPtr(32512)); // IDI_APPLICATION
         }
-        Log($"hwnd={hwnd} hIcon={hIcon}");
+        AutoSwitchService.Log($"TrayBalloon: hwnd={hwnd} hIcon={hIcon}");
 
         var data = new NOTIFYICONDATA
         {
@@ -92,7 +85,7 @@ static class TrayBalloon
             szTip = "Sonar Auto Switch",
         };
         var addOk = Shell_NotifyIcon(NIM_ADD, ref data);
-        Log($"NIM_ADD ok={addOk} err={Marshal.GetLastWin32Error()}");
+        AutoSwitchService.Log($"TrayBalloon: NIM_ADD ok={addOk} err={Marshal.GetLastWin32Error()}");
 
         // Windows 10+: opt into version 4 so balloons go to notification center.
         data.uVersion = NOTIFYICON_VERSION_4;
@@ -103,7 +96,7 @@ static class TrayBalloon
         data.szInfoTitle = title;
         data.dwInfoFlags = NIIF_INFO;
         var modOk = Shell_NotifyIcon(NIM_MODIFY, ref data);
-        Log($"NIM_MODIFY ok={modOk} err={Marshal.GetLastWin32Error()}");
+        AutoSwitchService.Log($"TrayBalloon: NIM_MODIFY ok={modOk} err={Marshal.GetLastWin32Error()}");
 
         _ = Task.Delay(5_000).ContinueWith(_ => Dispatcher.UIThread.Post(() =>
         {

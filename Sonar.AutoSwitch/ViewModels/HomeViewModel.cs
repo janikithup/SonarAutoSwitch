@@ -240,6 +240,8 @@ public class HomeViewModel : ViewModelBase
         }
 
         homeViewModel.ActiveProfile = activeProfile ?? homeViewModel.DefaultSonarGamingConfiguration;
+        // Sonar DB was readable → mark connected immediately, don't wait for first foreground switch.
+        homeViewModel.SonarStatus = SonarConnectionStatus.Connected;
 
         // One-time backfill: stamp existing profiles that predate the CreatedAt field.
         // Use sequential dates so list order is preserved as recency order.

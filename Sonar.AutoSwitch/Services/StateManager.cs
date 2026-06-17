@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
@@ -11,7 +11,6 @@ public class StateManager
     private readonly Dictionary<Type, DelayedDeduplicateAction> _saveActions = new();
     private readonly Dictionary<Type, object?> _states = new();
     private readonly HashSet<Type> _readOnly = new();
-
 
     private StateManager()
     {
@@ -32,19 +31,14 @@ public class StateManager
     public void SaveState<T>()
     {
         if (_readOnly.Contains(typeof(T))) return;
-        if (GetState<T>() is not { } state)
-            return;
-
-        if (!Directory.Exists(_appDataPath)) Directory.CreateDirectory(_appDataPath);
-
+        if (GetState<T>() is not { } state) return;
+        var path = GetJsonPath<T>();
         if (!_saveActions.TryGetValue(typeof(T), out var action))
             _saveActions[typeof(T)] = action = new DelayedDeduplicateAction();
-
         action.QueueAction(async () =>
         {
-            string jsonPath = Path.Combine(_appDataPath, typeof(T).Name + ".json");
 #pragma warning disable IL2026
-            await File.WriteAllTextAsync(jsonPath, JsonSerializer.Serialize(state));
+            await File.WriteAllTextAsync(path, JsonSerializer.Serialize(state));
 #pragma warning restore IL2026
         });
     }
@@ -53,10 +47,8 @@ public class StateManager
     {
         if (_readOnly.Contains(typeof(T))) return;
         if (GetState<T>() is not { } state) return;
-        if (!Directory.Exists(_appDataPath)) Directory.CreateDirectory(_appDataPath);
-        string jsonPath = Path.Combine(_appDataPath, typeof(T).Name + ".json");
 #pragma warning disable IL2026
-        File.WriteAllText(jsonPath, JsonSerializer.Serialize(state));
+        File.WriteAllText(GetJsonPath<T>(), JsonSerializer.Serialize(state));
 #pragma warning restore IL2026
     }
 
@@ -77,6 +69,12 @@ public class StateManager
     public bool CheckStateExists<T>()
     {
         return File.Exists(Path.Combine(_appDataPath, typeof(T).Name + ".json"));
+    }
+
+    private string GetJsonPath<T>()
+    {
+        Directory.CreateDirectory(_appDataPath);
+        return Path.Combine(_appDataPath, typeof(T).Name + ".json");
     }
 
     private T? GetState<T>()

@@ -302,6 +302,32 @@ public class HomePageSmokeTest
     }
 
     [AvaloniaFact]
+    public void Advanced_section_has_match_mode_checkbox()
+    {
+        var window = new Window { Width = 600, Height = 500 };
+        var home = new Home();
+        home.DataContext = new HomeViewModel();
+        window.Content = home;
+        window.Show();
+        window.UpdateLayout();
+
+        var expanders = home.GetVisualDescendants().OfType<Expander>().ToList();
+        expanders[0].IsExpanded = true;
+        window.UpdateLayout();
+
+        var advanced = home.GetVisualDescendants().OfType<Expander>()
+            .FirstOrDefault(e => e.GetValue(Avalonia.Automation.AutomationProperties.NameProperty)?.ToString() == "Advanced matching options");
+        Assert.NotNull(advanced);
+        advanced!.IsExpanded = true;
+        window.UpdateLayout();
+
+        var cb = home.GetVisualDescendants().OfType<CheckBox>()
+            .FirstOrDefault(c => c.GetValue(Avalonia.Automation.AutomationProperties.NameProperty)?.ToString() == "Match mode OR");
+        Assert.NotNull(cb);
+        Assert.False(cb!.IsChecked, "OR mode should be off by default");
+    }
+
+    [AvaloniaFact]
     public void Home_has_persistent_search_box()
     {
         var window = new Window { Width = 600, Height = 500 };
