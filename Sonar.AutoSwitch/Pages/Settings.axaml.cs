@@ -89,6 +89,9 @@ public partial class Settings : UserControl
     private void Reset_Click(object? sender, RoutedEventArgs e) =>
         _resetConfirmPanel.IsVisible = true;
 
+    private void Back_Click(object? sender, RoutedEventArgs e) =>
+        ((MainWindow)TopLevel.GetTopLevel(this)!).ShowHome();
+
     private void ResetCancel_Click(object? sender, RoutedEventArgs e) =>
         _resetConfirmPanel.IsVisible = false;
 

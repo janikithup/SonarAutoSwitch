@@ -13,13 +13,14 @@ public class AutoSwitchProfilesDatabase
 {
     public static AutoSwitchProfilesDatabase Instance { get; } = new();
 
+    private static readonly HttpClient _http = new();
+
     public async Task LoadDatabaseAsync()
     {
         try
         {
-            using var httpClient = new HttpClient();
             using HttpResponseMessage httpResponseMessage =
-                await httpClient.GetAsync(
+                await _http.GetAsync(
                     "https://raw.githubusercontent.com/adirh3/Sonar.AutoSwitch/master/game_database.json");
             await using Stream stream = await httpResponseMessage.Content.ReadAsStreamAsync();
             var githubConfigs = await JsonSerializer.DeserializeAsync<List<GitHubProfile>>(stream);

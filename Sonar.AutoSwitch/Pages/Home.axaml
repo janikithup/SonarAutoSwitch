@@ -10,45 +10,64 @@
              x:CompileBindings="True"
              x:DataType="viewModels:HomeViewModel">
     <UserControl.Styles>
-        <!-- ExpanderHeader toggle button must carry the profile name for screen readers. -->
         <Style Selector="Expander /template/ ToggleButton#ExpanderHeader">
             <Setter Property="AutomationProperties.Name"
                     Value="{Binding $parent[Expander].(AutomationProperties.Name)}" />
+            <Setter Property="MinHeight" Value="40" />
+            <Setter Property="Padding" Value="12,0,10,0" />
         </Style>
     </UserControl.Styles>
     <DockPanel>
-        <TextBlock DockPanel.Dock="Top" Text="Auto Switch Profiles" Margin="0,0,0,8"
-                   Theme="{StaticResource SubtitleTextBlockStyle}" />
-        <StackPanel Orientation="Horizontal" DockPanel.Dock="Top" Margin="0,0,0,4">
-            <TextBlock Text="Active config: " />
-            <TextBlock Text="{Binding ActiveProfile.Name}" FontWeight="Bold" />
-        </StackPanel>
-        <TextBlock DockPanel.Dock="Top" Text="Default config: " Margin="0,0,0,4" />
-        <ComboBox DockPanel.Dock="Top" SelectedItem="{Binding DefaultSonarGamingConfiguration}"
-                  PlaceholderText="Default game configuration" Margin="0,0,0,12"
-                  ItemsSource="{Binding Path=AvailableGamingConfigurations, Source={x:Static services:SteelSeriesSonarService.Instance}}">
-            <ComboBox.ItemTemplate>
-                <DataTemplate DataType="services:SonarGamingConfiguration">
-                    <TextBlock Text="{Binding Name}" />
-                </DataTemplate>
-            </ComboBox.ItemTemplate>
-        </ComboBox>
 
-        <TextBox DockPanel.Dock="Top"
-                 Text="{Binding SearchText, Mode=TwoWay}"
-                 Watermark="Search profiles..."
-                 Margin="0,0,0,4"
-                 AutomationProperties.Name="Search profiles" />
+        <!-- Header: active config (or inline search) | search toggle | settings gear -->
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto" Margin="0,8,0,8">
+            <!-- Active config label — hidden when searching -->
+            <StackPanel Grid.Column="0" Name="ActiveConfigPanel"
+                        Orientation="Horizontal" VerticalAlignment="Center" Spacing="4">
+                <TextBlock Text="Active config:" VerticalAlignment="Center" Opacity="0.7" />
+                <TextBlock Text="{Binding ActiveProfile.Name}" FontWeight="Bold"
+                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+            <!-- Inline search box — shown when searching -->
+            <TextBox Grid.Column="0" Name="SearchBox"
+                     IsVisible="False"
+                     Text="{Binding SearchText, Mode=TwoWay}"
+                     Watermark="Search profiles..."
+                     VerticalAlignment="Center"
+                     AutomationProperties.Name="Search profiles" />
+            <ToggleButton Grid.Column="1" Name="SearchToggle"
+                          Click="SearchToggle_Click"
+                          ToolTip.Tip="Search profiles"
+                          VerticalAlignment="Center"
+                          AutomationProperties.Name="Toggle search">
+                <ui:SymbolIcon Symbol="Find" />
+            </ToggleButton>
+            <Button Grid.Column="2"
+                    Click="OpenSettings_Click"
+                    ToolTip.Tip="Settings"
+                    VerticalAlignment="Center"
+                    AutomationProperties.Name="Open settings">
+                <ui:SymbolIcon Symbol="Settings" />
+            </Button>
+        </Grid>
 
-        <StackPanel Orientation="Horizontal" DockPanel.Dock="Top"
-                    Margin="0,0,0,8" Spacing="4">
-            <TextBlock Text="Sort:" VerticalAlignment="Center" Opacity="0.7" />
-            <Button Command="{Binding CycleSort}"
-                    ToolTip.Tip="{Binding SortModeTooltip}"
-                    AutomationProperties.Name="Cycle sort order"
-                    MinWidth="36"
-                    Content="{Binding SortModeLabel}" />
-        </StackPanel>
+        <!-- Default config with label -->
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*" Margin="0,0,0,8">
+            <TextBlock Grid.Column="0" Text="Default config:"
+                       VerticalAlignment="Center" Opacity="0.7" Margin="0,0,8,0" />
+            <ComboBox Grid.Column="1"
+                      SelectedItem="{Binding DefaultSonarGamingConfiguration}"
+                      PlaceholderText="None"
+                      ItemsSource="{Binding Path=AvailableGamingConfigurations, Source={x:Static services:SteelSeriesSonarService.Instance}}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate DataType="services:SonarGamingConfiguration">
+                        <TextBlock Text="{Binding Name}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+        </Grid>
 
         <ItemsControl DockPanel.Dock="Top" ItemsSource="{Binding FilteredProfiles}"
                       HorizontalAlignment="Stretch">
@@ -57,7 +76,7 @@
                     <Expander IsExpanded="{Binding IsExpanded, Mode=TwoWay}"
                               HorizontalAlignment="Stretch"
                               HorizontalContentAlignment="Stretch"
-                              Margin="0,1"
+                              Margin="0,2"
                               AutomationProperties.Name="{Binding DisplayName}">
                         <Expander.Header>
                             <StackPanel Orientation="Horizontal" Spacing="6">
@@ -84,12 +103,23 @@
                             </ComboBox>
 
                             <TextBlock Text="Game exe:" FontSize="11" Opacity="0.65" />
-                            <AutoCompleteBox Text="{Binding ExeName}"
-                                             Watermark="e.g. Overwatch"
-                                             FilterMode="Contains" MinimumPrefixLength="1"
-                                             MaxDropDownHeight="200"
-                                             ItemsSource="{x:Static viewModels:HomeViewModel.ProcessNames}"
-                                             AutomationProperties.Name="Game executable name" />
+                            <Grid ColumnDefinitions="*,Auto">
+                                <AutoCompleteBox Grid.Column="0"
+                                                 Text="{Binding ExeName}"
+                                                 Watermark="e.g. Overwatch"
+                                                 FilterMode="Contains" MinimumPrefixLength="1"
+                                                 MaxDropDownHeight="200"
+                                                 ItemsSource="{x:Static viewModels:HomeViewModel.ProcessNames}"
+                                                 AutomationProperties.Name="Game executable name" />
+                                <Button Grid.Column="1"
+                                        Click="BrowseExe_Click"
+                                        ToolTip.Tip="Browse for exe file"
+                                        AutomationProperties.Name="Browse for exe"
+                                        Margin="4,0,0,0"
+                                        VerticalAlignment="Center">
+                                    <ui:SymbolIcon Symbol="Folder" />
+                                </Button>
+                            </Grid>
                             <TextBlock Text="{Binding ExeRunningHint}"
                                        IsVisible="{Binding HasExeRunningHint}"
                                        Foreground="{DynamicResource SystemFillColorSuccessBrush}"
@@ -154,5 +184,18 @@
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>
+
+        <Button DockPanel.Dock="Top"
+                Click="AddProfile_Click"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center"
+                Margin="0,8,0,0"
+                AutomationProperties.Name="Add profile">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <ui:SymbolIcon Symbol="Add" />
+                <TextBlock Text="Add profile" />
+            </StackPanel>
+        </Button>
+
     </DockPanel>
 </UserControl>

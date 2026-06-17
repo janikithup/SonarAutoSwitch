@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using Sonar.AutoSwitch.Services.Win32;
 using Sonar.AutoSwitch.ViewModels;
 
 namespace Sonar.AutoSwitch.Services;
@@ -17,7 +18,7 @@ public class AutoSwitchService
 
     public AutoSwitchService()
     {
-        WindowEventManager.Instance.ForegroundWindowChanged += InstanceOnForegroundWindowChanged;
+        Win32WindowEventManager.Instance.ForegroundWindowChanged += InstanceOnForegroundWindowChanged;
         _homeViewModel = StateManager.Instance.GetOrLoadState<HomeViewModel>()!;
     }
 
@@ -26,9 +27,9 @@ public class AutoSwitchService
     public void ToggleEnabled(bool enable)
     {
         if (enable)
-            WindowEventManager.Instance.SubscribeToWindowEvents();
+            Win32WindowEventManager.Instance.SubscribeToWindowEvents();
         else
-            WindowEventManager.Instance.UnsubscribeToWindowsEvents();
+            Win32WindowEventManager.Instance.UnsubscribeToWindowsEvents();
     }
 
     private static readonly string LogPath = Path.Combine(

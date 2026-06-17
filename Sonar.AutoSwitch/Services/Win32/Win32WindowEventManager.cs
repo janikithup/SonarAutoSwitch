@@ -9,6 +9,8 @@ namespace Sonar.AutoSwitch.Services.Win32;
 
 public class Win32WindowEventManager
 {
+    public static Win32WindowEventManager Instance { get; } = new();
+
     private readonly WinEventProc _lpfnWinEventProc;
     private IntPtr _windowEventHook;
 

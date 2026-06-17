@@ -7,7 +7,6 @@ using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.VisualTree;
-using FluentAvalonia.UI.Controls;
 using Sonar.AutoSwitch.Pages;
 using Sonar.AutoSwitch.ViewModels;
 
@@ -16,7 +15,7 @@ namespace Sonar.AutoSwitch.Tests;
 public class SettingsPageSmokeTest
 {
     [AvaloniaFact]
-    public void Settings_renders_four_expanders()
+    public void Settings_renders_four_toggle_rows()
     {
         var window = new Window { Width = 600, Height = 500 };
         var settings = new Settings();
@@ -25,14 +24,14 @@ public class SettingsPageSmokeTest
         window.Show();
         window.UpdateLayout();
 
-        var expanders = settings.GetVisualDescendants().OfType<SettingsExpander>().ToList();
-        Assert.Equal(4, expanders.Count);
+        var toggles = settings.GetVisualDescendants().OfType<ToggleSwitch>().ToList();
+        Assert.Equal(4, toggles.Count);
 
-        var headers = expanders.Select(e => e.Header?.ToString() ?? "").ToList();
-        Assert.Contains("Enabled", headers);
-        Assert.Contains("Start at startup", headers);
-        Assert.Contains("Use GitHub profiles", headers);
-        Assert.Contains("Close to tray", headers);
+        var names = toggles.Select(t => t.GetValue(Avalonia.Automation.AutomationProperties.NameProperty)?.ToString() ?? "").ToList();
+        Assert.Contains("Enabled", names);
+        Assert.Contains("StartAtStartup", names);
+        Assert.Contains("UseGithubConfigs", names);
+        Assert.Contains("CloseToTray", names);
     }
 
     // B1 regression: JSON deserialization must not call RegisterInStartup or ToggleEnabled.
@@ -114,6 +113,15 @@ public class SettingsPageSmokeTest
             t.GetValue(Avalonia.Automation.AutomationProperties.NameProperty)?.ToString() == "CloseToTray");
         Assert.NotNull(closeToTrayToggle);
         Assert.True(closeToTrayToggle!.IsChecked, "CloseToTray should default to true");
+    }
+
+    [AvaloniaFact]
+    public void Settings_has_back_button()
+    {
+        var (_, settings) = CreateWindow();
+        var backBtn = settings.GetVisualDescendants().OfType<Button>()
+            .FirstOrDefault(b => b.GetValue(Avalonia.Automation.AutomationProperties.NameProperty)?.ToString() == "Back to profiles");
+        Assert.NotNull(backBtn);
     }
 
     [AvaloniaFact]

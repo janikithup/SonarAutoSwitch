@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using Sonar.AutoSwitch.Pages;
 using Sonar.AutoSwitch.ViewModels;
@@ -30,6 +31,93 @@ public class HomePageSmokeTest
         Assert.NotNull(headerPanel);
         var nameText = headerPanel!.Children.OfType<TextBlock>().First();
         Assert.False(string.IsNullOrWhiteSpace(nameText.Text), "Profile header text is empty — binding broken");
+    }
+
+    [AvaloniaFact]
+    public void Home_has_settings_button()
+    {
+        var window = new Window { Width = 600, Height = 500 };
+        var home = new Home();
+        home.DataContext = new HomeViewModel();
+        window.Content = home;
+        window.Show();
+        window.UpdateLayout();
+
+        var btn = home.GetVisualDescendants().OfType<Button>()
+            .FirstOrDefault(b => b.GetValue(Avalonia.Automation.AutomationProperties.NameProperty)?.ToString() == "Open settings");
+        Assert.NotNull(btn);
+    }
+
+    [AvaloniaFact]
+    public void Home_has_search_toggle()
+    {
+        var window = new Window { Width = 600, Height = 500 };
+        var home = new Home();
+        home.DataContext = new HomeViewModel();
+        window.Content = home;
+        window.Show();
+        window.UpdateLayout();
+
+        var btn = home.GetVisualDescendants().OfType<Avalonia.Controls.Primitives.ToggleButton>()
+            .FirstOrDefault(b => b.GetValue(Avalonia.Automation.AutomationProperties.NameProperty)?.ToString() == "Toggle search");
+        Assert.NotNull(btn);
+    }
+
+    [AvaloniaFact]
+    public void Home_has_add_profile_button()
+    {
+        var window = new Window { Width = 600, Height = 500 };
+        var home = new Home();
+        home.DataContext = new HomeViewModel();
+        window.Content = home;
+        window.Show();
+        window.UpdateLayout();
+
+        var btn = home.GetVisualDescendants().OfType<Button>()
+            .FirstOrDefault(b => b.GetValue(Avalonia.Automation.AutomationProperties.NameProperty)?.ToString() == "Add profile");
+        Assert.NotNull(btn);
+    }
+
+    [AvaloniaFact]
+    public void Profile_card_has_browse_exe_button()
+    {
+        var window = new Window { Width = 600, Height = 500 };
+        var home = new Home();
+        home.DataContext = new HomeViewModel();
+        window.Content = home;
+        window.Show();
+        window.UpdateLayout();
+
+        var expanders = home.GetVisualDescendants().OfType<Expander>().ToList();
+        Assert.True(expanders.Count > 0, "No Expanders");
+        expanders[0].IsExpanded = true;
+        window.UpdateLayout();
+
+        var btn = home.GetVisualDescendants().OfType<Button>()
+            .FirstOrDefault(b => b.GetValue(Avalonia.Automation.AutomationProperties.NameProperty)?.ToString() == "Browse for exe");
+        Assert.NotNull(btn);
+    }
+
+    [AvaloniaFact]
+    public void Profile_browse_exe_click_does_not_crash()
+    {
+        var window = new Window { Width = 600, Height = 500 };
+        var home = new Home();
+        home.DataContext = new HomeViewModel();
+        window.Content = home;
+        window.Show();
+        window.UpdateLayout();
+
+        var expanders = home.GetVisualDescendants().OfType<Expander>().ToList();
+        expanders[0].IsExpanded = true;
+        window.UpdateLayout();
+
+        var btn = home.GetVisualDescendants().OfType<Button>()
+            .First(b => b.GetValue(Avalonia.Automation.AutomationProperties.NameProperty)?.ToString() == "Browse for exe");
+
+        // StorageProvider returns no files in headless — handler must not crash.
+        btn.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        window.UpdateLayout();
     }
 
     [AvaloniaFact]
