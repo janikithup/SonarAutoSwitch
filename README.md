@@ -3,7 +3,7 @@
 A continuation of [adirh3/Sonar.AutoSwitch](https://github.com/adirh3/Sonar.AutoSwitch).
 Automatically switches your SteelSeries Sonar gaming audio profile when a game comes into focus.
 
-![screenshot](screenshot.png)
+<img src="screenshot.png" width="340" alt="screenshot" />
 
 ## How to use
 
