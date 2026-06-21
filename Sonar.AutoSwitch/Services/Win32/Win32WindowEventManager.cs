@@ -77,11 +77,18 @@ public class Win32WindowEventManager
         try
         {
             using var processById = Process.GetProcessById((int) pid);
-            string? fileName = processById.MainModule?.FileName;
-            if (string.IsNullOrEmpty(fileName))
-                return;
-            exePath = fileName;
-            exeName = Path.GetFileNameWithoutExtension(fileName);
+            string? fileName = null;
+            try { fileName = processById.MainModule?.FileName; } catch { }
+            if (!string.IsNullOrEmpty(fileName))
+            {
+                exePath = fileName;
+                exeName = Path.GetFileNameWithoutExtension(fileName);
+            }
+            else
+            {
+                // ponytail: MainModule unreadable for UWP/GamePass protected processes; ProcessName is always accessible
+                exeName = processById.ProcessName;
+            }
         }
         catch (Exception)
         {
