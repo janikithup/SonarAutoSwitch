@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
+using Avalonia.Threading;
 using Sonar.AutoSwitch.Services.Win32;
 using Sonar.AutoSwitch.ViewModels;
 
@@ -16,6 +18,7 @@ public class AutoSwitchService
     private SonarGamingConfiguration _selectedGamingConfiguration;
     private CancellationTokenSource _cancellationTokenSource;
     private AutoSwitchProfileViewModel? _lockedProfile;
+    private CancellationTokenSource? _keepCheckCts;
 
     public AutoSwitchService()
     {
@@ -37,6 +40,9 @@ public class AutoSwitchService
             Win32WindowEventManager.Instance.UnsubscribeToWindowsEvents();
             _selectedGamingConfiguration = default!;
             _lockedProfile = null;
+            _keepCheckCts?.Cancel();
+            _keepCheckCts?.Dispose();
+            _keepCheckCts = null;
             _homeViewModel.SonarStatus = SonarConnectionStatus.Idle;
         }
     }
@@ -68,9 +74,9 @@ public class AutoSwitchService
         : SonarConnectionStatus.Disconnected;
 
     // Exposed internal for unit testing — pass a fake isRunning to avoid real Process calls in tests.
-    internal static bool ShouldKeepLocked(AutoSwitchProfileViewModel? locked, Func<string, bool>? isRunning = null)
+    internal static bool ShouldKeepLocked(AutoSwitchProfileViewModel? locked, bool keepWhileRunning, Func<string, bool>? isRunning = null)
     {
-        if (locked?.KeepWhileRunning != true || string.IsNullOrEmpty(locked.ExeName)) return false;
+        if (!keepWhileRunning || locked is null || !locked.IsEnabled || string.IsNullOrEmpty(locked.ExeName)) return false;
         isRunning ??= name =>
         {
             var procs = Process.GetProcessesByName(name);
@@ -82,6 +88,7 @@ public class AutoSwitchService
 
     public static bool ProfileMatches(AutoSwitchProfileViewModel p, string? exeName, string title)
     {
+        if (!p.IsEnabled) return false;
         if (string.IsNullOrEmpty(p.ExeName) && string.IsNullOrEmpty(p.Title)) return false;
         bool exeOk = string.IsNullOrEmpty(p.ExeName) || string.Equals(p.ExeName, exeName, StringComparison.OrdinalIgnoreCase);
         bool titleOk = string.IsNullOrEmpty(p.Title) || title.Contains(p.Title, StringComparison.OrdinalIgnoreCase);
@@ -123,12 +130,49 @@ public class AutoSwitchService
                 AutoSwitchProfileViewModel? autoSwitchProfileViewModel =
                     autoSwitchProfileViewModels.FirstOrDefault(p => AutoSwitchService.ProfileMatches(p, windowExeName, e.Title));
 
+                bool keepWhileRunning = StateManager.Instance.GetOrLoadState<SettingsViewModel>().KeepWhileRunning;
                 if (autoSwitchProfileViewModel is not null)
+                {
                     _lockedProfile = autoSwitchProfileViewModel;
-                else if (ShouldKeepLocked(_lockedProfile))
+                    // Game is in foreground — no need to poll for its exit
+                    _keepCheckCts?.Cancel();
+                    _keepCheckCts?.Dispose();
+                    _keepCheckCts = null;
+                }
+                else if (ShouldKeepLocked(_lockedProfile, keepWhileRunning))
                 {
                     Log($"KeepWhileRunning: {_lockedProfile!.ExeName} still running, holding {_lockedProfile.SonarGamingConfiguration.Name}");
                     autoSwitchProfileViewModel = _lockedProfile;
+                    // Profile held but game is not in foreground — recheck in 2.5s so we revert
+                    // promptly when the game exits without a subsequent window-focus change.
+                    _keepCheckCts?.Cancel();
+                    _keepCheckCts?.Dispose();
+                    var cts = _keepCheckCts = new CancellationTokenSource();
+                    _ = Task.Delay(2500, cts.Token).ContinueWith(
+                        _ => Dispatcher.UIThread.Post(Win32WindowEventManager.Instance.FireCurrentForeground),
+                        CancellationToken.None,
+                        TaskContinuationOptions.OnlyOnRanToCompletion,
+                        TaskScheduler.Default);
+                }
+                else if (keepWhileRunning)
+                {
+                    // Proactive: _lockedProfile was never set (e.g. app started with game already running,
+                    // or profile was just re-enabled). Scan all profiles for any whose exe is currently running.
+                    var found = autoSwitchProfileViewModels.FirstOrDefault(p => ShouldKeepLocked(p, true));
+                    if (found != null)
+                    {
+                        _lockedProfile = found;
+                        autoSwitchProfileViewModel = found;
+                        Log($"ProactiveKeep: {found.ExeName} is running, activating {found.SonarGamingConfiguration.Name}");
+                        _keepCheckCts?.Cancel();
+                        _keepCheckCts?.Dispose();
+                        var cts = _keepCheckCts = new CancellationTokenSource();
+                        _ = Task.Delay(2500, cts.Token).ContinueWith(
+                            _ => Dispatcher.UIThread.Post(Win32WindowEventManager.Instance.FireCurrentForeground),
+                            CancellationToken.None,
+                            TaskContinuationOptions.OnlyOnRanToCompletion,
+                            TaskScheduler.Default);
+                    }
                 }
 
                 SonarGamingConfiguration? sonarGamingConfiguration = autoSwitchProfileViewModel?.SonarGamingConfiguration;

@@ -16,6 +16,7 @@ namespace Sonar.AutoSwitch.Pages;
 public partial class Home : UserControl
 {
     private HomeViewModel? _hookedVm;
+    private ScrollViewer? _scrollViewer;
 
     public Home()
     {
@@ -32,6 +33,7 @@ public partial class Home : UserControl
     protected override void OnAttachedToVisualTree(Avalonia.VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
+        _scrollViewer = this.GetVisualAncestors().OfType<ScrollViewer>().FirstOrDefault();
         SyncWindowTitle();
     }
 
@@ -88,13 +90,7 @@ public partial class Home : UserControl
 
     private void AddProfile_Click(object? sender, RoutedEventArgs e)
     {
-        StateManager.Instance.GetOrLoadState<HomeViewModel>().AddAutoSwitchProfile();
-        Dispatcher.UIThread.Post(() =>
-        {
-            this.GetVisualDescendants()
-                .OfType<Expander>()
-                .FirstOrDefault(exp => exp.IsExpanded)
-                ?.BringIntoView();
-        }, DispatcherPriority.Background);
+        (DataContext as HomeViewModel)?.AddAutoSwitchProfile();
+        Dispatcher.UIThread.Post(() => _scrollViewer?.ScrollToEnd(), DispatcherPriority.Background);
     }
 }

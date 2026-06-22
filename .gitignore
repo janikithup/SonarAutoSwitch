@@ -6,6 +6,7 @@ riderModule.iml
 /.vs/Sonar.AutoSwitch
 
 BACKLOG.md
+.claude/
 Sonar.AutoSwitch.Tests/UIExplorationTest.cs
 Sonar.AutoSwitch.Tests/app.manifest
 docs/

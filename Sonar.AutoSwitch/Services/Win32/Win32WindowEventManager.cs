@@ -48,11 +48,12 @@ public class Win32WindowEventManager
 
     // U8: fire a synthetic foreground event for whatever window is in front right now.
     // Lets AutoSwitchService switch on enable without waiting for the user to alt-tab.
+    // Bypasses the WS_EX_TOOLWINDOW guard intentionally — that guard filters random OS tray
+    // popups from the hook; synthetic fires from our own code should always go through.
     public void FireCurrentForeground()
     {
         var hwnd = GetForegroundWindow();
-        if (hwnd == IntPtr.Zero) return;
-        WindowEventCallback(IntPtr.Zero, EVENT_SYSTEM_FOREGROUND, hwnd, 0, 0, 0, 0);
+        if (hwnd != IntPtr.Zero) FireWindowInfo(hwnd);
     }
 
     public event EventHandler<WindowInfo>? ForegroundWindowChanged;
@@ -68,7 +69,11 @@ public class Win32WindowEventManager
         // Tool windows (tray flyouts, notification popups) are never game windows
         if ((GetWindowLongPtr(hwnd, GWL_EXSTYLE).ToInt64() & WS_EX_TOOLWINDOW) != 0)
             return;
+        FireWindowInfo(hwnd);
+    }
 
+    private void FireWindowInfo(nint hwnd)
+    {
         string windowTitle = GetWindowTitle(hwnd);
         if (GetWindowThreadProcessId(hwnd, out var pid) == 0)
             return;

@@ -17,7 +17,11 @@ public class AppViewModel : ViewModelBase
     public void WireTooltip(HomeViewModel home, SettingsViewModel settings)
     {
         UpdateTooltip(home, settings);
-        home.AutoSwitchProfiles.CollectionChanged += (_, _) => UpdateTooltip(home, settings);
+        home.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is null or nameof(HomeViewModel.ActiveProfile))
+                UpdateTooltip(home, settings);
+        };
         // ponytail: override strips [CallerMemberName]; null = "all changed" in Avalonia.
         settings.PropertyChanged += (_, e) =>
         {
@@ -28,17 +32,28 @@ public class AppViewModel : ViewModelBase
 
     private void UpdateTooltip(HomeViewModel home, SettingsViewModel settings)
     {
-        int n = home.AutoSwitchProfiles.Count;
-        TrayTooltipText = settings.Enabled
-            ? $"Sonar Auto Switch — {n} profile{(n == 1 ? "" : "s")}"
-            : "Sonar Auto Switch — disabled";
+        if (!settings.Enabled)
+        {
+            TrayTooltipText = "Sonar Auto Switch — disabled";
+            return;
+        }
+        var name = home.ActiveProfile?.Name;
+        TrayTooltipText = string.IsNullOrEmpty(name)
+            ? "Sonar Auto Switch"
+            : $"Sonar Auto Switch — {name}";
     }
 
     public void Open()
     {
         if (Application.Current!.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime lifetime)
         {
-            lifetime.MainWindow ??= new MainWindow();
+            if (lifetime.MainWindow is { IsVisible: true })
+            {
+                lifetime.MainWindow.Activate();
+                return;
+            }
+            lifetime.MainWindow ??= App.EarlyWindow ?? new MainWindow();
+            App.EarlyWindow = null;
             lifetime.MainWindow.Show();
         }
     }

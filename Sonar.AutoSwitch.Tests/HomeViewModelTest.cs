@@ -244,6 +244,74 @@ public class HomeViewModelTest
         Assert.Equal("Game2", home.AutoSwitchProfiles[0].ExeName);
     }
 
+    // Guard: AddAutoSwitchProfile must not pile up blank cards.
+
+    [Fact]
+    public void AddAutoSwitchProfile_does_not_add_second_blank_when_last_is_unconfigured()
+    {
+        var home = new HomeViewModel();
+        home.AutoSwitchProfiles.Clear();
+        home.AutoSwitchProfiles.Add(new AutoSwitchProfileViewModel()); // blank: no exe, no title, no sonar config
+
+        home.AddAutoSwitchProfile();
+
+        Assert.Single(home.AutoSwitchProfiles);
+    }
+
+    [Fact]
+    public void AddAutoSwitchProfile_expands_existing_blank_instead_of_adding()
+    {
+        var home = new HomeViewModel();
+        home.AutoSwitchProfiles.Clear();
+        var blank = new AutoSwitchProfileViewModel();
+        home.AutoSwitchProfiles.Add(blank);
+
+        home.AddAutoSwitchProfile();
+
+        Assert.True(blank.IsExpanded);
+    }
+
+    [Fact]
+    public void AddAutoSwitchProfile_adds_when_last_has_content()
+    {
+        var home = new HomeViewModel();
+        home.AutoSwitchProfiles.Clear();
+        home.AutoSwitchProfiles.Add(new AutoSwitchProfileViewModel { ExeName = "game" });
+
+        home.AddAutoSwitchProfile();
+
+        Assert.Equal(2, home.AutoSwitchProfiles.Count);
+    }
+
+    [Fact]
+    public void AddAutoSwitchProfile_clears_search_text()
+    {
+        var home = new HomeViewModel();
+        home.AutoSwitchProfiles.Clear();
+        home.AutoSwitchProfiles.Add(new AutoSwitchProfileViewModel { ExeName = "GameA" });
+        home.SearchText = "zzz_no_match";
+
+        home.AddAutoSwitchProfile();
+
+        Assert.Equal(string.Empty, home.SearchText);
+    }
+
+    [Fact]
+    public void AddAutoSwitchProfile_new_blank_visible_in_filtered_profiles_after_search_was_active()
+    {
+        var home = new HomeViewModel();
+        home.AutoSwitchProfiles.Clear();
+        home.AutoSwitchProfiles.Add(new AutoSwitchProfileViewModel { ExeName = "GameA" });
+        home.SearchText = "zzz_no_match"; // hides everything
+
+        home.AddAutoSwitchProfile();
+
+        // Search cleared → blank visible in FilteredProfiles
+        var filtered = home.FilteredProfiles.ToList();
+        Assert.Equal(2, filtered.Count);
+        Assert.True(filtered.Any(p => string.IsNullOrEmpty(p.ExeName)));
+    }
+
     // FilteredProfiles reactivity: notification fires on collection and profile mutations.
 
     [Fact]

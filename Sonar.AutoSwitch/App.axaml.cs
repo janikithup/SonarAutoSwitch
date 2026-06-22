@@ -12,6 +12,8 @@ namespace Sonar.AutoSwitch;
 
 public class App : Application
 {
+    internal static MainWindow? EarlyWindow;
+
     public override void Initialize()
     {
         DataContext = new AppViewModel();
@@ -37,20 +39,26 @@ public class App : Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
-            // ponytail: Avalonia auto-shows desktop.MainWindow in Start(). Only create it when
-            // it should be visible; Open() creates it lazily via MainWindow ??= new MainWindow().
+            var mainWindow = new MainWindow();
+            if (demo)
+            {
+                mainWindow.Height = double.NaN;
+                mainWindow.SizeToContent = SizeToContent.Height;
+            }
             if (firstLoad || demo || args.Contains("--show"))
             {
-                var mainWindow = new MainWindow();
-                // Demo: grow to fit all cards so the screenshot has no scrollbar / cut-off.
-                // Clear the fixed Height (NaN = auto) so SizeToContent can take over.
-                if (demo)
-                {
-                    mainWindow.Height = double.NaN;
-                    mainWindow.SizeToContent = SizeToContent.Height;
-                }
                 desktop.MainWindow = mainWindow;
-                desktop.MainWindow.Show();
+                mainWindow.Show();
+            }
+            else
+            {
+                // Pre-create so Open() is instant — XAML loading is the slow path.
+                // Show+Hide before the message loop starts: creates the OS window handle and
+                // triggers Activated→RefreshGamingConfigurations so the SQLite cache is warm.
+                // No visual flash: message loop hasn't started yet, so DWM has no time to paint.
+                EarlyWindow = mainWindow;
+                EarlyWindow.Show();
+                EarlyWindow.Hide();
             }
             if (firstLoad && !demo)
                 StateManager.Instance.SaveStateNow<SettingsViewModel>();

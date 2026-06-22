@@ -15,7 +15,7 @@ namespace Sonar.AutoSwitch.Tests;
 public class SettingsPageSmokeTest
 {
     [AvaloniaFact]
-    public void Settings_renders_four_toggle_rows()
+    public void Settings_renders_five_toggle_rows()
     {
         var window = new Window { Width = 600, Height = 500 };
         var settings = new Settings();
@@ -25,13 +25,14 @@ public class SettingsPageSmokeTest
         window.UpdateLayout();
 
         var toggles = settings.GetVisualDescendants().OfType<ToggleSwitch>().ToList();
-        Assert.Equal(4, toggles.Count);
+        Assert.Equal(5, toggles.Count);
 
         var names = toggles.Select(t => t.GetValue(Avalonia.Automation.AutomationProperties.NameProperty)?.ToString() ?? "").ToList();
         Assert.Contains("Enabled", names);
         Assert.Contains("StartAtStartup", names);
         Assert.Contains("UseGithubConfigs", names);
         Assert.Contains("CloseToTray", names);
+        Assert.Contains("KeepWhileRunning", names);
     }
 
     // B1 regression: JSON deserialization must not call RegisterInStartup or ToggleEnabled.
@@ -39,14 +40,19 @@ public class SettingsPageSmokeTest
     [Fact]
     public void SettingsViewModel_deserializes_all_fields_correctly()
     {
-        const string json = """{"Enabled":true,"StartAtStartup":false,"UseGithubConfigs":false,"CloseToTray":false}""";
+        const string json = """{"Enabled":true,"StartAtStartup":false,"UseGithubConfigs":false,"CloseToTray":false,"KeepWhileRunning":false}""";
         var vm = JsonSerializer.Deserialize<SettingsViewModel>(json);
         Assert.NotNull(vm);
         Assert.True(vm!.Enabled);
         Assert.False(vm.StartAtStartup);
         Assert.False(vm.UseGithubConfigs);
         Assert.False(vm.CloseToTray);
+        Assert.False(vm.KeepWhileRunning);
     }
+
+    [Fact]
+    public void SettingsViewModel_KeepWhileRunning_defaults_to_true()
+        => Assert.True(new SettingsViewModel().KeepWhileRunning);
 
     private static (Window, Settings) CreateWindow()
     {

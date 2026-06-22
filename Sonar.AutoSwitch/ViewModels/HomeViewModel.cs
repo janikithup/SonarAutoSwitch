@@ -232,6 +232,15 @@ public class HomeViewModel : ViewModelBase
         // Sonar DB was readable → mark connected immediately, don't wait for first foreground switch.
         homeViewModel.SonarStatus = SonarConnectionStatus.Connected;
 
+        // Remove blank profiles that piled up before the add-guard was introduced.
+        // Keep one blank if no configured profiles exist (preserves the empty-list default state).
+        var blanks = homeViewModel.AutoSwitchProfiles
+            .Where(p => string.IsNullOrEmpty(p.ExeName) && string.IsNullOrEmpty(p.Title) && p.SonarGamingConfiguration.Id is null)
+            .ToList();
+        bool hasConfigured = homeViewModel.AutoSwitchProfiles.Count > blanks.Count;
+        foreach (var b in hasConfigured ? blanks : blanks.Skip(1))
+            homeViewModel.AutoSwitchProfiles.Remove(b);
+
         // One-time backfill: stamp existing profiles that predate the CreatedAt field.
         // Use sequential dates so list order is preserved as recency order.
         var undated = homeViewModel._autoSwitchProfiles.Where(p => !p.CreatedAt.HasValue).ToList();
@@ -248,6 +257,13 @@ public class HomeViewModel : ViewModelBase
 
     public void AddAutoSwitchProfile()
     {
+        SearchText = string.Empty; // ensure blank card is visible regardless of active filter
+        var last = AutoSwitchProfiles.LastOrDefault();
+        if (last != null && string.IsNullOrEmpty(last.ExeName) && string.IsNullOrEmpty(last.Title) && last.SonarGamingConfiguration.Id is null)
+        {
+            last.IsExpanded = true;
+            return;
+        }
         var profile = new AutoSwitchProfileViewModel { CreatedAt = DateTime.UtcNow };
         AutoSwitchProfiles.Add(profile); // Subscribe wired via CollectionChanged
         profile.IsExpanded = true;       // Accordion collapses others via OnProfilePropertyChanged
@@ -282,6 +298,8 @@ public class HomeViewModel : ViewModelBase
         if (e.PropertyName is nameof(AutoSwitchProfileViewModel.ExeName)
                            or nameof(AutoSwitchProfileViewModel.Title))
             base.OnPropertyChanged(nameof(FilteredProfiles));
+        if (e.PropertyName == nameof(AutoSwitchProfileViewModel.IsEnabled))
+            Services.Win32.Win32WindowEventManager.Instance.FireCurrentForeground();
     }
 
     protected override void OnPropertyChanged([CallerMemberName] string? propertyName = null)

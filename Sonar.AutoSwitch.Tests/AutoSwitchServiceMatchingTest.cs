@@ -130,4 +130,12 @@ public class AutoSwitchServiceMatchingTest
         var p = Profile("", "", orMode: true);
         Assert.False(AutoSwitchService.ProfileMatches(p, "AnyGame", "Any Title"));
     }
+
+    [Fact]
+    public void Disabled_profile_is_not_matched()
+    {
+        var p = Profile("MyGame", "");
+        p.IsEnabled = false;
+        Assert.False(AutoSwitchService.ProfileMatches(p, "MyGame", "any title"));
+    }
 }

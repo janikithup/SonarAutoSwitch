@@ -57,16 +57,19 @@ public class SettingsViewModel : ViewModelBase
     }
 
     private bool _closeToTray = true;
+    private bool _keepWhileRunning = true;
 
     // ponytail: JsonConstructor sets backing fields directly; RegisterInStartup/ToggleEnabled never fire on load.
     [JsonConstructor]
     private SettingsViewModel(bool enabled = true, bool startAtStartup = true,
-                              bool useGithubConfigs = true, bool closeToTray = true)
+                              bool useGithubConfigs = true, bool closeToTray = true,
+                              bool keepWhileRunning = true)
     {
         _enabled = enabled;
         _startAtStartup = startAtStartup;
         _useGithubConfigs = useGithubConfigs;
         _closeToTray = closeToTray;
+        _keepWhileRunning = keepWhileRunning;
     }
 
     public SettingsViewModel() { }
@@ -78,6 +81,17 @@ public class SettingsViewModel : ViewModelBase
         {
             if (value == _closeToTray) return;
             _closeToTray = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public bool KeepWhileRunning
+    {
+        get => _keepWhileRunning;
+        set
+        {
+            if (value == _keepWhileRunning) return;
+            _keepWhileRunning = value;
             OnPropertyChanged();
         }
     }

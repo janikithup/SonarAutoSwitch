@@ -1,3 +1,4 @@
+using Sonar.AutoSwitch.Services;
 using Sonar.AutoSwitch.ViewModels;
 
 namespace Sonar.AutoSwitch.Tests;
@@ -5,18 +6,42 @@ namespace Sonar.AutoSwitch.Tests;
 public class AppViewModelTest
 {
     [Fact]
-    public void TrayTooltip_shows_profile_count_when_enabled()
+    public void TrayTooltip_shows_active_profile_name_when_set()
     {
         var home = new HomeViewModel();
-        home.AutoSwitchProfiles.Add(new AutoSwitchProfileViewModel());
-        home.AutoSwitchProfiles.Add(new AutoSwitchProfileViewModel());
-        // default has 1 profile; we added 2 more → 3 total
-        var settings = new SettingsViewModel { Enabled = true };
+        home.ActiveProfile = new SonarGamingConfiguration("id1", "Hell Yeah");
+        var settings = new SettingsViewModel();
         var vm = new AppViewModel();
         vm.WireTooltip(home, settings);
 
-        Assert.Contains("3", vm.TrayTooltipText);
+        Assert.Contains("Hell Yeah", vm.TrayTooltipText);
         Assert.DoesNotContain("disabled", vm.TrayTooltipText);
+    }
+
+    [Fact]
+    public void TrayTooltip_shows_base_text_when_no_active_profile()
+    {
+        var home = new HomeViewModel();
+        var settings = new SettingsViewModel();
+        var vm = new AppViewModel();
+        vm.WireTooltip(home, settings);
+
+        Assert.Equal("Sonar Auto Switch", vm.TrayTooltipText);
+    }
+
+    [Fact]
+    public void TrayTooltip_updates_when_active_profile_changes()
+    {
+        var home = new HomeViewModel();
+        var settings = new SettingsViewModel();
+        var vm = new AppViewModel();
+        vm.WireTooltip(home, settings);
+        var before = vm.TrayTooltipText;
+
+        home.ActiveProfile = new SonarGamingConfiguration("id1", "Sea of Thieves");
+
+        Assert.NotEqual(before, vm.TrayTooltipText);
+        Assert.Contains("Sea of Thieves", vm.TrayTooltipText);
     }
 
     [Fact]
@@ -28,20 +53,6 @@ public class AppViewModelTest
         vm.WireTooltip(home, settings);
 
         Assert.Contains("disabled", vm.TrayTooltipText);
-    }
-
-    [Fact]
-    public void TrayTooltip_updates_when_profile_added()
-    {
-        var home = new HomeViewModel();
-        var settings = new SettingsViewModel { Enabled = true };
-        var vm = new AppViewModel();
-        vm.WireTooltip(home, settings);
-        var before = vm.TrayTooltipText;
-
-        home.AutoSwitchProfiles.Add(new AutoSwitchProfileViewModel());
-
-        Assert.NotEqual(before, vm.TrayTooltipText);
     }
 
     [Fact]

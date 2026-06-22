@@ -7,7 +7,7 @@
         TransparencyLevelHint="Mica"
         Icon="/Assets/icon.ico"
         Title="Sonar Auto Switch">
-    <ScrollViewer Padding="12">
+    <ScrollViewer Padding="12" BringIntoViewOnFocusChange="False">
         <ContentControl Name="PageHost" />
     </ScrollViewer>
 </Window>
